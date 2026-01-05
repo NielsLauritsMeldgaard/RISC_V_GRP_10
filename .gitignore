@@ -1,0 +1,42 @@
+# ============================
+# Vivado generated files
+# ============================
+*.jou
+*.log
+*.str
+*.cache
+*.hw
+*.runs
+*.srcs
+*.sim
+*.xpr
+*.pb
+*.dmp
+
+# IP build output (but NOT .xci)
+**/ip_user_files/
+**/.Xil/
+
+# ============================
+# OS / Editor junk
+# ============================
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# ============================
+# Simulation outputs
+# ============================
+*.wdb
+*.vcd
+*.fst
+*.ghw
+
+# ============================
+# Temporary files
+# ============================
+*.tmp
+*.bak
+*~

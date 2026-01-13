@@ -1,52 +1,75 @@
 `timescale 1ns / 1ps
-// notes for this module; the mux going to addr adder uses the aluSrc signal 
-//as select, and it is unclear whether this implementation is valid.
-// there is unfinished forwarding logic in this file.
-// U and J types instructions are missing and unclear if all branch functions work!
-module ID(
-    input  logic        clk, rst,
-    input  logic [31:0] instr_in,      // Wire from IF
-    input  logic [31:0] pc_in,         // Wire from IF
-    input  logic [31:0] rd_data_wb, 
-    input  logic [4:0]  rd_addr_wb, 
-    input  logic        regWrite_wb, 
-    input  logic [31:0] ex_res,
-    input  logic        fwd_mem_wdata,
-    input  logic        branch_taken,  
-    output logic [31:0] rs1_data, rs2_immData,
-    output logic [31:0] imm,
-    output logic [4:0]  Daddr,
-    output logic [31:0] Ddata,
-    output logic [31:0] pc_out,        
-    output logic [4:0]  aluCtrl_piped,
-    output logic        memToReg_piped, memRead_piped, memWrite_piped, regWrite_piped,
-    output logic [4:0]  rd_addr_piped
-    );
-    typedef enum logic [2:0] { IMM_I, IMM_S, IMM_B, IMM_U, IMM_J } imm_sel_t;
 
-    logic [6:0]  opcode;
-    logic [4:0]  rs1, rs2, rd;
-    logic aluSrc, memToReg, regWrite, memRead, memWrite, branch;
-    logic [4:0] aluCtrl;
-    logic [2:0] imm_sel;
-    // Register file
-    logic [31:0] rs2_data; 
-    logic [31:0] IR_next;
+module ID(
+    // --- Global Control Signals ---
+    input  logic        clk,               // System clock
+    input  logic        rst,               // Global synchronous reset
+    input  logic        stall,             // From datapath: Freezes IR/PC when memory is busy
+    input  logic        branch_taken,      // From EX: High if a branch is taken (flushes IR to NOP)
+
+    // --- Inputs from IF Stage (Combinational Wires) ---
+    input  logic [31:0] instr_id_i,          // Raw instruction bits from instruction memory
+    input  logic [31:0] pc_id_i,             // PC address of the current instruction_in from IF
+
+    // --- Feedback from EX Stage (Write-Back) ---
+    input  logic [31:0] rd_data_wb,        // Final result to be written into the Register File
+    input  logic [4:0]  rd_addr_wb,        // Destination register address for Write-Back
+    input  logic        regWrite_wb,       // Write-enable signal for the Register File
+    input  logic [31:0] ex_res,            // Current cycle result (used for internal forwarding)- from Execute stage
     
+    // --- Inputs for Forwarding Control ---
+    input  logic        fwd_mem_wdata,     // Logic to decide if ex_res should be forwarded to Store
+
+    // --- Data Wishbone Master Interface (To Data Memory/Cache) ---
+    output logic [31:0] dwb_adr_o,         // Memory address (calculated as rs1 + imm)
+    output logic [31:0] dwb_dat_o,         // Data to be stored (shifted into correct byte lane)
+    output logic [3:0]  dwb_sel_o,         // Byte select mask (for sb,sh, sw in data mem); 4'b1111 -> sw, 4'b0001 sb (byte 0), etc.
+    output logic        dwb_we_o,          // Write enable (1 for Store, 0 for Load)
+    output logic        dwb_stb_o,         // Strobe: Initiates a memory request
+    output logic        dwb_cyc_o,         // Cycle: High for the duration of the bus transaction
+    input  logic        dwb_ack_i,         // Acknowledge: Memory has finished the request
+
+    // --- Pipeline Outputs to EX Stage ---
+    output logic [31:0] rs1_data,          // Data from source register 1
+    output logic [31:0] rs2_immData,       // Muxed operand 2 (either rs2_data or immediate)
+    output logic [31:0] imm_id_o,               // Sign-extended 32-bit immediate value
+  
+    
+    output logic [31:0] pc_id_o,            // Pipelined PC value sent to EX for branch math
+    output logic [4:0]  aluCtrl_id_o,     // ALU control opcode sent to EX
+    output logic        memToReg_id_o,    // Control: Select memory result for Write-Back
+    
+    output logic        regWrite_id_o,    // Control: Enables Register File write-back
+    output logic [4:0]  rd_addr_id_o,     // Pipelined destination register address
+    output logic [2:0]  funct3_id_o,      // instr[14:12] needed in EX for Load slicing
+    output logic [1:0]  addr_offset_id_o  // Last 2 bits of address needed in EX for Load slicing
+    );
+
+    // --- Internal Typedefs and Logic ---
+    typedef enum logic [2:0] { IMM_I, IMM_S, IMM_B, IMM_U, IMM_J } imm_sel_t;   // immidiate types
+
+    logic [6:0]  opcode;                   // Extracted opcode from IR
+    logic [4:0]  rs1, rs2, rd;             // Extracted register addresses from IR
+    logic aluSrc, memToReg, regWrite, memWrite, branch; // Control flags
+    logic [4:0] aluCtrl;                   // Combinational ALU opcode
+    logic [2:0] imm_sel;                   // Selector for immediate generation type
+    logic [31:0] rs2_data;                 // Raw data from source register 2
+    logic [31:0] IR_next;                  // Combinational next state of the IR
+
     // --- PIPELINE REGISTERS (IR and PC) ---
-    logic [31:0] IR, pc_id;
+    logic [31:0] IR, pc_id;                // The Instruction Register and associated PC
+    
     always_ff @(posedge clk) begin
         if (rst) begin
-            IR    <= 32'h00000013; // NOP
+            IR    <= 32'h00000013;         // Reset to ADDI x0, x0, 0 (NOP)
             pc_id <= 0;
-        end else begin
-            IR    <=IR_next;
-            pc_id <= pc_in;
+        end else if (!stall) begin         // Capture logic: Only update if not stalling
+            IR    <= IR_next;
+            pc_id <= pc_id_i;
         end
     end
 
-    
-
+    // --- Register File Instance ---
     regFile regFile (
      .clk(clk), .rst(rst), .we(regWrite_wb),         
      .rs1_addr(IR[19:15]), .rs2_addr(IR[24:20]),   
@@ -54,47 +77,74 @@ module ID(
      .rs1_data(rs1_data), .rs2_data(rs2_data) 
     );
 
-    
-    
+    // --- Main Decoder and Data Logic ---
     always_comb begin
-         // Decoding from IR
-         IR_next =  branch_taken ? 32'h00000013 : instr_in;
+         // 1. Flush Logic
+         IR_next =  branch_taken ? 32'h00000013 : instr_id_i;  // flush with NOP, if branch taken
+
+         // 2. IR Partitioning
          rs1    = IR[19:15];
          rs2    = IR[24:20];
          rd     = IR[11:7];
          opcode = IR[6:0];
-          case (imm_sel)
-             IMM_I: imm = {{20{IR[31]}}, IR[31:20]};
-             IMM_S: imm = {{20{IR[31]}}, IR[31:25], IR[11:7]};
-             IMM_B: imm = {{19{IR[31]}}, IR[31], IR[7], IR[30:25], IR[11:8], 1'b0};
-             default: imm = 32'b0;
-         endcase
          
-          aluSrc = 0; memToReg = 0; regWrite = 0; memRead = 0; memWrite = 0; branch = 0; aluCtrl = 5'b0;
-          imm_sel = IMM_I; 
+         // 3. Decoder Defaults
+         aluSrc = 0; memToReg = 0; regWrite = 0; memWrite = 0; branch = 0; 
+         aluCtrl = 5'b0; imm_sel = IMM_I; 
 
+         // 4. Instruction Opcode Table
          case (opcode)
             7'b0110011: begin regWrite = 1; aluCtrl = {1'b0,IR[14:12],IR[30]}; end
             7'b0010011: begin aluSrc = 1; regWrite = 1; aluCtrl = {1'b0,IR[14:12],1'b0}; end
-            7'b0000011: begin aluSrc = 1; memToReg = 1; regWrite = 1; memRead = 1; end
+            7'b0000011: begin aluSrc = 1; memToReg = 1; regWrite = 1; end
             7'b0100011: begin aluSrc = 1; memWrite = 1; imm_sel = IMM_S; end
             7'b1100011: begin branch = 1; aluCtrl = {1'b1,IR[14:12],1'b0}; imm_sel = IMM_B; end
             default: ;    
          endcase
+
+         // 5. Immediate Generation
+         case (imm_sel)
+             IMM_I: imm_id_o = {{20{IR[31]}}, IR[31:20]};
+             IMM_S: imm_id_o = {{20{IR[31]}}, IR[31:25], IR[11:7]};
+             IMM_B: imm_id_o = {{19{IR[31]}}, IR[31], IR[7], IR[30:25], IR[11:8], 1'b0};
+             default: imm_id_o = 32'b0;
+         endcase
          
-         pc_out         = pc_id;
-         aluCtrl_piped  = aluCtrl;
-         memToReg_piped = memToReg;
-         memRead_piped  = memRead;
-         memWrite_piped = memWrite;
-         regWrite_piped = regWrite;
-         rd_addr_piped  = rd;
+         // 6. Output Signal Driving
+         pc_id_o         = pc_id;
+         aluCtrl_id_o  = aluCtrl;
+         memToReg_id_o = memToReg;
+       
          
-         rs2_immData = aluSrc ? imm : rs2_data; // Fixed: now uses internal rs2_data
+         regWrite_id_o = regWrite;
+         rd_addr_id_o  = rd;
+         funct3_id_o   = IR[14:12];
+         addr_offset_id_o = dwb_adr_o[1:0];
+         
+         rs2_immData = aluSrc ? imm_id_o : rs2_data; 
+         dwb_adr_o   = rs1_data + imm_id_o; 
+         
+    end
+    
+    // --- Data Wishbone Control Logic ---
+    always_comb begin
+        // A. Byte Select Logic (Masking)
+        case (IR[14:12]) 
+            3'b000: dwb_sel_o = 4'b0001 << dwb_adr_o[1:0];       // Byte (SB/LB)
+            3'b001: dwb_sel_o = dwb_adr_o[1] ? 4'b1100 : 4'b0011; // Half (SH/LH)
+            default: dwb_sel_o = 4'b1111;                         // Word (SW/LW)
+        endcase
+    
+        // B. Wishbone Handshake Logic
+        dwb_we_o  = memWrite; 
+        dwb_stb_o = (memToReg | memWrite);
+        dwb_cyc_o = dwb_stb_o;
         
-         Daddr = rs1_data + imm; 
-         Ddata = fwd_mem_wdata ? ex_res : rs2_data; 
-         
-        
+        // C. Data Alignment for Stores
+        case (IR[14:12])
+            3'b000: dwb_dat_o = {4{rs2_data[7:0]}};  // Replicate byte across word
+            3'b001: dwb_dat_o = {2{rs2_data[15:0]}}; // Replicate half across word
+            default: dwb_dat_o = rs2_data;           // Full word
+        endcase
     end
 endmodule

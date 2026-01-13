@@ -4,7 +4,7 @@ module instruction_memory #(
     parameter MEM_WORDS = 1024             
 )(
     input  logic         clk,
-    input  logic         rst,              // Added reset for handshake logic
+    input  logic         rst,              // reset for handshake logic
     
     // --- Wishbone Slave Interface ---
     input  logic [31:0]  wb_adr_i,         // PC from IF_stage
@@ -28,13 +28,10 @@ module instruction_memory #(
             wb_ack_o <= 1'b0;
             wb_dat_o <= 32'h0;
         end else begin
-            // 1. Handshake Logic
-            // In a standard 1-cycle Synchronous RAM, ACK is high one cycle after STB
-            // We use 'wb_stb_i && !wb_ack_o' to ensure ACK is high for exactly one cycle 
-            // per request if the master holds strobe high.
+           
             wb_ack_o <= wb_stb_i && !wb_ack_o;
 
-            // 2. Synchronous Read
+            
             if (wb_stb_i) begin
                 wb_dat_o <= mem[wb_adr_i >> 2];
             end

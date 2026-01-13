@@ -41,7 +41,7 @@ module data_memory #(
             end
 
             // 3. Write Logic (Byte-Selective)
-            // Note: We is outside 'if (En)' to support 'We-only' write cycles
+            
             if (We) begin
                 if (sel[0]) mem[addr >> 2][7:0]   <= Wdata[7:0];
                 if (sel[1]) mem[addr >> 2][15:8]  <= Wdata[15:8];

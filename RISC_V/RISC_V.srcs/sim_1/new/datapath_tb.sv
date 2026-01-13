@@ -6,7 +6,7 @@ module datapath_tb;
     logic rst;
     logic CPURun;
     logic [31:0] a0;
-    localparam logic [31:0] EXPECTED_A0 = 32'd46; // set expected value here
+    localparam logic [31:0] EXPECTED_A0 = 32'h2cc; // set expected value here
     
     // DUT
     datapath DUT (

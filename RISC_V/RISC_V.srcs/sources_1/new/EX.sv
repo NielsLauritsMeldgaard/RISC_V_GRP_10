@@ -21,13 +21,21 @@ module ex_stage(
         ALU_in1 = ALUSrc1;
         ALU_in2 = ALUSrc2;
         
-        case (ALUOp)
-            4'b0000: ALU_res = ALU_in1 & ALU_in2;
-            4'b0001: ALU_res = ALU_in1 | ALU_in2; 
-            4'b0010: ALU_res = $signed(ALU_in1) + $signed(ALU_in2);
-            4'b0110: ALU_res = $signed(ALU_in1) - $signed(ALU_in2);
-            default: ALU_res = 32'b0; // def case
-        endcase
+        if (ALUOp[3]) begin
+            case (ALUOp[2:0])
+                3'b000: ALU_res = ALU_in1 != ALU_in2;
+                3'b001: ALU_res = ALU_in2; // LUI: just pass through the immediate (already shifted)
+                default: ALU_res = 32'b0;
+            endcase
+        end else begin
+            case (ALUOp[2:0])
+                3'b000: ALU_res = ALU_in1 & ALU_in2;
+                3'b001: ALU_res = ALU_in1 | ALU_in2; 
+                3'b010: ALU_res = $signed(ALU_in1) + $signed(ALU_in2);
+                3'b110: ALU_res = $signed(ALU_in1) - $signed(ALU_in2);
+                default: ALU_res = 32'b0; // def case
+            endcase
+        end
         
         //@TODO: make result be based on a mux selecting between ALU and Mem (currently just ALU result)
         result = ALU_res;

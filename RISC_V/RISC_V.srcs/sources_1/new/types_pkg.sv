@@ -1,7 +1,5 @@
 package types_pkg;
-    
-    
-    
+        
     typedef struct packed {
         logic RegWrite;
         logic MemRead;

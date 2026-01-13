@@ -10,11 +10,16 @@ module if_stage #(
         input logic clk,
         input logic rst,
         input logic CPURun,
-        output logic [31:0] instr
+        input logic addSel,
+        input logic [31:0] pc_offset,
+        input logic [31:0] pc_ex,
+        output logic [31:0] instr,
+        output logic [31:0] pc_id_next
     );
                 
         logic [$clog2(INSTR_MEM_SIZE * 4) - 1 : 0] pc, pc_next; // The width should be four times greater to make up for bytewise offset (0, 4, 8... N * 4)     
-        logic [$clog2(INSTR_MEM_SIZE - 1) : 0] rom_addr;       
+        logic [$clog2(INSTR_MEM_SIZE - 1) : 0] rom_addr;  
+        logic [31:0] addSrc1, addSrc2;     
         
         // Init the instruction memory
         sync_rom #(
@@ -26,8 +31,15 @@ module if_stage #(
             .dout(instr)
         );
         
-        always_comb begin           
-            pc_next = CPURun ? 4 + pc : pc; // Increment PC if the run flag is high
+        always_comb begin
+            pc_id_next = pc;
+            if (CPURun) begin
+                addSrc1 = (addSel ? pc_ex : pc);
+                addSrc2 = (addSel ? pc_offset : 4);                
+                pc_next = addSrc1 + addSrc2;
+            end else
+                pc_next = pc;                        
+            //pc_next = CPURun ? 4 + pc : pc; // Increment PC if the run flag is high
             rom_addr = pc_next >> 2; //@TODO: This starts at #4 not #0
         end
         

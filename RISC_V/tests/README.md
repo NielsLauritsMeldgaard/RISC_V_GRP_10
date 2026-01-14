@@ -18,6 +18,15 @@ Both scripts automatically:
 2. Run xsim simulations
 3. Report pass/fail results
 
+Tip: If auto-detection of xsim fails, set the path in the scripts:
+- Windows: edit `run_tests.bat` and set `XSIM_PATH` to your `xsim.bat`
+- Linux/macOS: edit `run_tests.sh` and set `XSIM_PATH` to your `xsim` binary
+
+Or pass it directly:
+```bash
+py -3 run_testbench.py --task task1 --xsim-path "C:\\Xilinx\\Vivado\\2024.1\\bin\\xsim.bat"
+```
+
 ## Configuring Tests
 
 Edit the scripts to change which tasks to run:

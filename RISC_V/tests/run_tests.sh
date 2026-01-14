@@ -7,6 +7,9 @@
 TASKS="task1"
 # Timeout per test in seconds
 TIMEOUT=60
+# Optional: Path to xsim (set if auto-detect fails)
+# Example: XSIM_PATH="/opt/Xilinx/Vivado/2024.1/bin/xsim"
+XSIM_PATH=""
 # ============================================
 
 cd "$(dirname "$0")" || exit 1
@@ -32,4 +35,8 @@ echo "Step 2: Running simulations..."
 echo ""
 
 # Step 2: Run tests
-python run_testbench.py --task $TASKS --timeout $TIMEOUT
+if [ -n "$XSIM_PATH" ]; then
+  python run_testbench.py --task $TASKS --timeout $TIMEOUT --xsim-path "$XSIM_PATH"
+else
+  python run_testbench.py --task $TASKS --timeout $TIMEOUT
+fi

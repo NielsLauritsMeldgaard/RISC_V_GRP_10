@@ -7,6 +7,9 @@ REM Task(s) to run - change these as needed
 set "TASKS=task1"
 REM Timeout per test in seconds
 set "TIMEOUT=60"
+REM Optional: Path to xsim.bat (set if auto-detect fails)
+REM Example: set "XSIM_PATH=C:\Xilinx\Vivado\2024.1\bin\xsim.bat"
+set "XSIM_PATH="
 REM ============================================
 
 cd /d "%~dp0" || exit /b 1
@@ -24,7 +27,7 @@ echo Step 1: Converting binary files...
 echo.
 for %%T in (%TASKS%) do (
     echo Converting %%T...
-    python bin_to_mem.py %%T
+    py -3 bin_to_mem.py %%T
 )
 
 echo.
@@ -32,7 +35,9 @@ echo Step 2: Running simulations...
 echo.
 
 REM Step 2: Run tests
-python run_testbench.py --task %TASKS% --timeout %TIMEOUT%
+set "CMD=py -3 run_testbench.py --task %TASKS% --timeout %TIMEOUT%"
+if defined XSIM_PATH set "CMD=%CMD% --xsim-path \"%XSIM_PATH%\""
+%CMD%
 
 pause
 exit /b %errorlevel%

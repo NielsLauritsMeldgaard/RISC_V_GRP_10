@@ -10,6 +10,7 @@ import subprocess
 import sys
 from pathlib import Path
 import shutil
+import os
 
 
 def find_xsim() -> str:
@@ -26,15 +27,21 @@ def find_xsim() -> str:
 	if xsim_path:
 		return xsim_path
 	
+	# Environment variable hint (XILINX_VIVADO usually points at version dir)
+	xilinx_vivado = os.environ.get("XILINX_VIVADO")
+	if xilinx_vivado:
+		cand = Path(xilinx_vivado) / "bin" / ("xsim.bat" if os.name == "nt" else "xsim")
+		if cand.exists():
+			return str(cand)
+	
 	# Search common Vivado installation directories
-	vivado_root = Path("C:/Xilinx/Vivado")
-	if vivado_root.exists():
-		# Find all version directories and sort descending (newest first)
-		version_dirs = sorted(vivado_root.glob("20*"), reverse=True)
-		for version_dir in version_dirs:
-			xsim_bat = version_dir / "bin" / "xsim.bat"
-			if xsim_bat.exists():
-				return str(xsim_bat)
+	for base in [Path("C:/Xilinx/Vivado"), Path("D:/Xilinx/Vivado")]:
+		if base.exists():
+			version_dirs = sorted(base.glob("20*"), reverse=True)
+			for version_dir in version_dirs:
+				xsim = version_dir / "bin" / ("xsim.bat" if os.name == "nt" else "xsim")
+				if xsim.exists():
+					return str(xsim)
 	
 	# Linux paths
 	vivado_root_linux = Path("/opt/Xilinx/Vivado")

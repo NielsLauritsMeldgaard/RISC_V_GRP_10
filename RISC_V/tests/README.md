@@ -40,7 +40,7 @@ Run specific tests with Python directly:
 
 ```bash
 # Convert binaries to memory files first
-python program.py task1
+python bin_to_mem.py task1
 
 # Run all tests in task1
 python run_testbench.py --task task1

@@ -24,7 +24,7 @@ echo "Step 1: Converting binary files..."
 echo ""
 for task in $TASKS; do
     echo "Converting $task..."
-    python program.py "$task"
+    python bin_to_mem.py "$task"
 done
 
 echo ""

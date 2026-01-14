@@ -24,7 +24,7 @@ echo Step 1: Converting binary files...
 echo.
 for %%T in (%TASKS%) do (
     echo Converting %%T...
-    python program.py %%T
+    python bin_to_mem.py %%T
 )
 
 echo.

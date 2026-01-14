@@ -93,7 +93,7 @@ RISC_V/tests/
 ├── run_tests.bat          # Windows test runner script (easy - just run!)
 ├── run_tests.sh           # Linux/macOS test runner script
 ├── run_testbench.py       # Advanced Python test orchestrator
-├── program.py             # Binary to .mem converter
+├── bin_to_mem.py          # Binary to .mem converter
 └── README.md              # Detailed testing documentation
 ```
 

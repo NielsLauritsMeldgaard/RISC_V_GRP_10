@@ -1,3 +1,5 @@
+`timescale 1ns / 1ps
+
 module forwarding_unit (
     // Inputs
     input  logic        rW_wb,        // writeback register write enable

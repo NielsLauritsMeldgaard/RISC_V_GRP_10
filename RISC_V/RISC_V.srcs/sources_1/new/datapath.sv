@@ -1,3 +1,5 @@
+`timescale 1ns / 1ps
+
 module datapath #(
     parameter MEM_WORDS = 1024
 )(

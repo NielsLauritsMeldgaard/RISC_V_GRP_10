@@ -1,0 +1,10 @@
+00A00093  // 00: ADDI x1, x0, 10   (x1 = 10)
+01408113  // 04: ADDI x2, x1, 20   (x2 = x1 + 20 = 30) -> FORWARD x1
+002081B3  // 08: ADD  x3, x1, x2   (x3 = 10 + 30 = 40) -> FORWARD x2
+00302423  // 0c: SW   x3, 8(x0)    (Mem[8] = 40)       -> FORWARD x3 (Store Data)
+00802203  // 10: LW   x4, 8(x0)    (x4 = 40)           
+00000013  // 14: NOP               (Required: Sync memory data arrives 1 cycle late)
+00520293  // 18: ADDI x5, x4, 5    (x5 = 40 + 5 = 45)  -> FORWARD x4 (Load result)
+00528463  // 1c: BEQ  x5, x5, 8    (Jump +8 to 0x24)   -> FORWARD x5 (Branch logic)
+00100093  // 20: ADDI x1, x0, 1     (SHOULD BE SKIPPED)
+07B00513  // 24: ADDI x10, x0, 123 (Final Target, x10 = 123)

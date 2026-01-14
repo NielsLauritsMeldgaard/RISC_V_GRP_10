@@ -44,6 +44,58 @@ RISC_V_GRP_10/
 3. Open the project file: `RISC_V/RISC_V.xpr`
 4. Vivado will automatically regenerate the build directories
 
+## Testing
+
+Comprehensive automated test suite with both simple scripts and advanced Python tools.
+
+### Quick Start - Run Tests with Scripts
+
+The easiest way to run tests - just execute the script for your OS:
+
+**Windows:**
+```bash
+RISC_V\tests\run_tests.bat
+```
+
+**Linux/macOS:**
+```bash
+RISC_V/tests/run_tests.sh
+```
+
+Both scripts automatically convert binaries and run all configured tests. Edit the script to change which tasks to run.
+
+### Full Testing Documentation
+
+For detailed testing instructions, configuration options, and manual testing, see [RISC_V/tests/README.md](RISC_V/tests/README.md)
+
+This includes:
+- ✅ Automated test execution (Windows batch & Bash scripts)
+- ✅ Python-based test orchestration
+- ✅ Binary to memory file conversion
+- ✅ Register comparison against expected results
+- ✅ ECALL-based test termination
+- ✅ Multi-Vivado version support
+
+### Prerequisites
+- Vivado 2022.x or later (xsim simulator)
+- Python 3.x
+- Test binaries (.bin files) and expected results (.res files)
+
+### Test Structure
+```
+RISC_V/tests/
+├── task1/                  # Task 1 test programs
+│   ├── addpos.bin         # Binary test program
+│   ├── addpos.mem         # Hex memory file (generated)
+│   ├── addpos.res         # Expected register results
+│   └── ...
+├── task2/                  # Task 2 test programs
+├── run_tests.bat          # Windows test runner script (easy - just run!)
+├── run_tests.sh           # Linux/macOS test runner script
+├── run_testbench.py       # Advanced Python test orchestrator
+├── program.py             # Binary to .mem converter
+└── README.md              # Detailed testing documentation
+```
 
 ## Contributors
 Group 10

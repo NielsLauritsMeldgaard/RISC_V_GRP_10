@@ -1,0 +1,45 @@
+name: SystemVerilog CI
+
+on:
+  push:
+    branches: [ main]
+  pull_request:
+    branches: [ main]
+
+jobs:
+  verilator:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Verilator
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y verilator
+          verilator --version
+
+      - name: Verify source files are found
+        run: find RISC_V/RISC_V.srcs/sources_1/new -name "*.sv"
+
+      - name: Verilator lint / compile check
+        run: |
+          verilator \
+            --lint-only \
+            --Wall \
+            --Wno-DECLFILENAME \
+            $(find RISC_V/RISC_V.srcs/sources_1/new -name "*.sv")
+
+      - name: Report success
+        if: success()
+        run: |
+          echo "### OK: SystemVerilog Syntax Check Passed" >> $GITHUB_STEP_SUMMARY
+          echo "All SystemVerilog files passed Verilator lint checking." >> $GITHUB_STEP_SUMMARY
+
+      - name: Report failure
+        if: failure()
+        run: |
+          echo "### FATAL: SystemVerilog Syntax Check Failed" >> $GITHUB_STEP_SUMMARY
+          echo "One or more SystemVerilog files have syntax or lint errors." >> $GITHUB_STEP_SUMMARY
+          echo "Review the Verilator output above for details." >> $GITHUB_STEP_SUMMARY

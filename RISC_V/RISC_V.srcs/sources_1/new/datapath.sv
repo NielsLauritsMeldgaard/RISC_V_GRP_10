@@ -7,6 +7,9 @@ module datapath #(
     // --- Global Control Signals ---
     logic stall;
     logic br_dec; 
+    logic [1:0] aluFwdSrc; // alu forward mux select: high if forwarding of rs1 or rs2 is neccisarry
+    logic [4:0]  rs1,rs2;
+    logic        fwd_mem_data;
 
     // --- Instruction Wishbone Bus (I-Bus) ---
     logic [31:0] iwb_adr, iwb_dat;
@@ -47,7 +50,7 @@ module datapath #(
         .clk(clk), .rst(rst), .stall(stall),
         .instr_id_i(instr_w), .pc_id_i(pc_w),
         .rd_data_wb(ex_res), .rd_addr_wb(rd_wb), .regWrite_wb(rW_wb),
-        .ex_res(ex_res), .fwd_mem_wdata(1'b0), .branch_taken(br_dec),
+        .ex_res(ex_res), .fwd_mem_wdata(fwd_mem_data), .branch_taken(br_dec),
         // Data Bus Master Ports
         .dwb_adr_o(dwb_adr), .dwb_dat_o(dwb_dat_o),
         .dwb_sel_o(dwb_sel), .dwb_we_o(dwb_we),
@@ -58,7 +61,10 @@ module datapath #(
         .pc_id_o(pc_id), .aluCtrl_id_o(aluOP), .memToReg_id_o(mToR),
         .regWrite_id_o(rW), .rd_addr_id_o(rd_id),
         .funct3_id_o(funct3_id), 
-        .addr_offset_id_o(addr_offset_id) 
+        .addr_offset_id_o(addr_offset_id),
+        // ouput to forward hazard unit
+        .rs1_id_o(rs1), .rs2_id_o(rs2),
+        .aluSrc_id_o(aluSrc_id), .branch_id_o(branch_id)
     );
 
     // --- 4. STAGE 3: EXECUTE (EX) ---
@@ -70,7 +76,7 @@ module datapath #(
         .rd_addr_ex_i(rd_id), 
         .funct3_ex_i(funct3_id), 
         .addr_offset_ex_i(addr_offset_id),
-        .aluFwdSrc(2'b00),
+        .aluFwdSrc(aluFwdSrc),
         // Bus Data Input
         .dwb_dat_i(dwb_dat_i), 
         // Result and Feedback
@@ -93,5 +99,19 @@ module datapath #(
         .We(dwb_stb && dwb_we),  // We high for Stores
         .Rdata(dwb_dat_i), .Ack(dwb_ack)
     );
-
+    
+    
+    
+    ////// Forwarding unit ///////
+   forwarding_unit fwd_unit (
+        .rW_wb        (rW_wb),
+        .dwb_we       (dwb_we),
+        .rd_wb        (rd_wb),
+        .rs1          (rs1),
+        .rs2          (rs2),
+        .aluSrc_id    (aluSrc_id), // Connect to ID output
+        .branch_id    (branch_id), // Connect to ID output
+        .aluFwdSrc    (aluFwdSrc),
+        .fwd_mem_data (fwd_mem_data)
+    );
 endmodule

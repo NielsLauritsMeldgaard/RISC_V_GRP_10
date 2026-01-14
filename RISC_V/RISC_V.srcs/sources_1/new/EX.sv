@@ -36,11 +36,12 @@ module EX #(
 );
 
     // --- Internal Pipeline Registers (ID/EX) ---
-    logic [31:0] rs1_reg, rs2_reg, pc_reg, imm_reg;
+    logic [31:0] rs1_reg, rs2_reg, pc_reg, imm_reg, ex_res_reg;
     logic [4:0]  aluOP_reg, rd_reg;
     logic [2:0]  funct3_reg;
     logic [1:0]  addr_offset_reg;
     logic        mToReg_reg, rWrite_reg;
+    logic [1:0] aluFwdSrc_reg; 
 
     // --- Internal Wires ---
     logic [31:0] op1, op2, aluRes, load_data;
@@ -56,11 +57,11 @@ module EX #(
     // --- 2. MAIN COMBINATIONAL LOGIC ---
     always_comb begin
         // A. Forwarding Mux (Selecting ALU Operands)
-        case (aluFwdSrc)
+        case (aluFwdSrc_reg)
             2'b00:   begin op1 = rs1_reg;  op2 = rs2_reg; end 
-            2'b01:   begin op1 = rs1_reg;  op2 = res_ex_o;  end // Forward wire to Op2
-            2'b10:   begin op1 = res_ex_o;   op2 = rs2_reg; end // Forward wire to Op1
-            2'b11:   begin op1 = res_ex_o;   op2 = res_ex_o;  end // Forward wire to both
+            2'b01:   begin op1 = rs1_reg;  op2 = ex_res_reg;  end // Forward wire to Op2
+            2'b10:   begin op1 = ex_res_reg;   op2 = rs2_reg; end // Forward wire to Op1
+            2'b11:   begin op1 = ex_res_reg;   op2 = ex_res_reg;  end // Forward wire to both
             default: begin op1 = rs1_reg;  op2 = rs2_reg; end
         endcase
 
@@ -100,7 +101,7 @@ module EX #(
         // D. Branch and Pass-through Assignments
         rd_addr_ex_o     = rd_reg; 
         regWrite_ex_o    = rWrite_reg;
-        br_dec_ex_o = aluOP_reg[4] & aluRes[0]; // Branch Taken logic
+        br_dec_ex_o      = aluOP_reg[4] & aluRes[0]; // Branch Taken logic
         pc_ex_o          = pc_reg; 
         imm_ex_o         = imm_reg;
     end
@@ -112,6 +113,8 @@ module EX #(
             {rs1_reg, rs2_reg, pc_reg, imm_reg} <= '0;
             {aluOP_reg, rd_reg, funct3_reg, addr_offset_reg} <= '0;
             {mToReg_reg, rWrite_reg} <= '0;
+            ex_res_reg <= '0;
+            aluFwdSrc_reg <= 2'b00;
         end else if (!stall) begin
             // Capture new values from ID stage ONLY if not stalling
             rs1_reg         <= rs1_val_reg_next;
@@ -124,6 +127,8 @@ module EX #(
             addr_offset_reg <= addr_offset_ex_i;
             mToReg_reg      <= memToReg_ex_i;
             rWrite_reg      <= regWrite_ex_i;
+            ex_res_reg      <= res_ex_o;
+            aluFwdSrc_reg <= aluFwdSrc;
         end
     end
 

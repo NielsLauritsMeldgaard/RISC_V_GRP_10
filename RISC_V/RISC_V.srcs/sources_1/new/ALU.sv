@@ -10,7 +10,7 @@ module ALU(
     always_comb begin
         res = 32'b0; // Default output
 
-        casez (aluOP) // casez is required for the '?' wildcards
+        casez (aluOP) 
             // Arithmetic / logic
             5'b00000: res = op1 + op2;                           // ADD
             5'b00001: res = op1 - op2;                           // SUB

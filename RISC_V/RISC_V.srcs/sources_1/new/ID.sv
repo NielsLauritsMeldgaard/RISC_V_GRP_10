@@ -17,8 +17,13 @@ module ID(
     input  logic        regWrite_wb,       // Write-enable signal for the Register File
     input  logic [31:0] ex_res,            // Current cycle result (used for internal forwarding)- from Execute stage
     
-    // --- Inputs for Forwarding Control ---
+    // --- I/O for Forwarding Control ---
     input  logic        fwd_mem_wdata,     // Logic to decide if ex_res should be forwarded to Store
+    output logic        aluSrc_id_o,
+    output logic        branch_id_o,
+    output logic [4:0]  rs1_id_o,             // source register 1: used only for forward hazard unit
+    output logic [4:0]  rs2_id_o,             // source register 2: used only for forward hazard unit 
+  
 
     // --- Data Wishbone Master Interface (To Data Memory/Cache) ---
     output logic [31:0] dwb_adr_o,         // Memory address (calculated as rs1 + imm)
@@ -32,10 +37,10 @@ module ID(
     // --- Pipeline Outputs to EX Stage ---
     output logic [31:0] rs1_data,          // Data from source register 1
     output logic [31:0] rs2_immData,       // Muxed operand 2 (either rs2_data or immediate)
-    output logic [31:0] imm_id_o,               // Sign-extended 32-bit immediate value
-  
+    output logic [31:0] imm_id_o,          // Sign-extended 32-bit immediate value
+   
     
-    output logic [31:0] pc_id_o,            // Pipelined PC value sent to EX for branch math
+    output logic [31:0] pc_id_o,          // Pipelined PC value sent to EX for branch math
     output logic [4:0]  aluCtrl_id_o,     // ALU control opcode sent to EX
     output logic        memToReg_id_o,    // Control: Select memory result for Write-Back
     
@@ -55,7 +60,7 @@ module ID(
     logic [2:0] imm_sel;                   // Selector for immediate generation type
     logic [31:0] rs2_data;                 // Raw data from source register 2
     logic [31:0] IR_next;                  // Combinational next state of the IR
-
+    logic [31:0] Dmem_data;                // data for data memory from rs2
     // --- PIPELINE REGISTERS (IR and PC) ---
     logic [31:0] IR, pc_id;                // The Instruction Register and associated PC
     
@@ -87,6 +92,10 @@ module ID(
          rs2    = IR[24:20];
          rd     = IR[11:7];
          opcode = IR[6:0];
+         
+         rs1_id_o = rs1;
+         rs2_id_o = rs2;
+        
          
          // 3. Decoder Defaults
          aluSrc = 0; memToReg = 0; regWrite = 0; memWrite = 0; branch = 0; 
@@ -124,6 +133,9 @@ module ID(
          rs2_immData = aluSrc ? imm_id_o : rs2_data; 
          dwb_adr_o   = rs1_data + imm_id_o; 
          
+         aluSrc_id_o = aluSrc;
+         branch_id_o = branch;
+         
     end
     
     // --- Data Wishbone Control Logic ---
@@ -141,10 +153,15 @@ module ID(
         dwb_cyc_o = dwb_stb_o;
         
         // C. Data Alignment for Stores
+       
+        
         case (IR[14:12])
-            3'b000: dwb_dat_o = {4{rs2_data[7:0]}};  // Replicate byte across word
-            3'b001: dwb_dat_o = {2{rs2_data[15:0]}}; // Replicate half across word
-            default: dwb_dat_o = rs2_data;           // Full word
+            3'b000: Dmem_data = {4{rs2_data[7:0]}};  // Replicate byte across word
+            3'b001: Dmem_data = {2{rs2_data[15:0]}}; // Replicate half across word
+            default: Dmem_data = rs2_data;           // Full word
         endcase
+        
+        dwb_dat_o = fwd_mem_wdata ? ex_res : Dmem_data;
     end
+        
 endmodule

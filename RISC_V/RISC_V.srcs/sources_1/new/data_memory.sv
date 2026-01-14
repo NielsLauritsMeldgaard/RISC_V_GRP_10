@@ -1,27 +1,28 @@
 `timescale 1ns / 1ps
 
 module data_memory #(
-    parameter MEM_WORDS = 1024 
+    parameter MEM_WORDS = 16384 // 64KB
 )(
     input  logic         clk,
-    input  logic         rst,        // Global reset
-    input  logic [31:0]  addr,       // Byte address from CPU
-    input  logic [31:0]  Wdata,      // Data to store
-    input  logic [3:0]   sel,        // Byte select mask (Wishbone SEL)
-    input  logic         En,         // Strobe for Read (memRead)
-    input  logic         We,         // Strobe for Write (memWrite)
-    output logic [31:0]  Rdata,      // Data to load
-    output logic         Ack         // Wishbone Acknowledge
+    input  logic         rst,        
+    input  logic [31:0]  addr,       // Full 32-bit Byte Address
+    input  logic [31:0]  Wdata,      
+    input  logic [3:0]   sel,        
+    input  logic         En,         
+    input  logic         We,         
+    output logic [31:0]  Rdata,      
+    output logic         Ack         
 );
-    // Force Block RAM inference
+    // Calculate how many bits are needed to index the words
+    localparam ADDR_LSB = 2; 
+    localparam ADDR_MSB = $clog2(MEM_WORDS) + ADDR_LSB - 1;
+
+    // The Memory Array
     (* ram_style = "block" *) 
     logic [31:0] mem [0:MEM_WORDS-1];
 
-    // Initialize memory to zero
     initial begin
-        for (int i = 0; i < MEM_WORDS; i++) begin
-            mem[i] = 32'h0;
-        end
+        for (int i = 0; i < MEM_WORDS; i++) mem[i] = 32'h0;
     end
 
     // --- Synchronous Logic Block ---
@@ -30,23 +31,22 @@ module data_memory #(
             Rdata <= 32'h0;
             Ack   <= 1'b0;
         end else begin
-            // 1. Handshake Logic
-            // Ack goes high 1 cycle after a request (En or We)
-            // We use '!Ack' to ensure it's a 1-cycle pulse per request
+            // 1. Wishbone Handshake
+            // Ensures Ack is a 1-cycle pulse even if CPU stalls with En=1
             Ack <= (En | We) && !Ack;
 
             // 2. Read Logic
             if (En) begin
-                Rdata <= mem[addr >> 2];
+                // Use only the relevant bits for the 64KB range
+                Rdata <= mem[addr[ADDR_MSB:ADDR_LSB]];
             end
 
             // 3. Write Logic (Byte-Selective)
-            
             if (We) begin
-                if (sel[0]) mem[addr >> 2][7:0]   <= Wdata[7:0];
-                if (sel[1]) mem[addr >> 2][15:8]  <= Wdata[15:8];
-                if (sel[2]) mem[addr >> 2][23:16] <= Wdata[23:16];
-                if (sel[3]) mem[addr >> 2][31:24] <= Wdata[31:24];
+                if (sel[0]) mem[addr[ADDR_MSB:ADDR_LSB]][7:0]   <= Wdata[7:0];
+                if (sel[1]) mem[addr[ADDR_MSB:ADDR_LSB]][15:8]  <= Wdata[15:8];
+                if (sel[2]) mem[addr[ADDR_MSB:ADDR_LSB]][23:16] <= Wdata[23:16];
+                if (sel[3]) mem[addr[ADDR_MSB:ADDR_LSB]][31:24] <= Wdata[31:24];
             end
         end
    end

@@ -41,3 +41,4 @@ end
                       (we && rs2_addr == rd_addr) ? rd_data : regs[rs2_addr];
 
 endmodule
+

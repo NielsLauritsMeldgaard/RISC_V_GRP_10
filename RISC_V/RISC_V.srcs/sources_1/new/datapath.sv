@@ -119,7 +119,7 @@ module datapath #(
     // --- 6. SLAVE 1: IO PERIPHERAL MANAGER ---
     io_manager peripherals (
         .clk(clk), .rst(rst),
-        // Bus Interface
+        // wishbone slave interface (CPU side)
         .wb_adr_i(s1_adr), .wb_dat_i(s1_dat_w), .wb_stb_i(s1_stb),
         .wb_we_i(s1_we), .wb_dat_o(s1_dat_r), .wb_ack_o(s1_ack),
         // Physical Pins

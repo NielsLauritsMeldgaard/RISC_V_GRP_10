@@ -26,28 +26,8 @@ module io_manager (
     logic       seg_we, uart_we;
     logic [7:0] u_rx_data, p_key_data;
     logic       u_rx_valid, u_tx_busy, p_ready;
-
-     always_comb begin 
-        case word_index 
-            2'b00: begin
-            
-            end
-            2'b01: begin
-            
-            end
-            2'b10: begin
-            
-            end
-            2'b11: begin 
-            
-            end        
-        end 
-     end 
-     
-     always_ff begin 
-     
-     
-     end
+    logic [3:0] d_buttons;
+    
     // --- 3. SUB-MODULE INSTANTIATIONS ---
 
     seven_seg_controller seg_unit (
@@ -68,5 +48,42 @@ module io_manager (
         .ps2_clk(ps2_clk), .ps2_data(ps2_data),
         .key_code_o(p_key_data), .data_ready_o(p_ready)
     );
+    
+    debounce button_unit (
+        .clk(clk), .rst(rst), .buttons(buttons), .d_buttons(d_buttons)
+    );
+    
+     always_comb begin 
+        // defaults 
+        word_index = wb_adr_i[3:2];
+        write_stb  = wb_stb_i && wb_we_i;
+        
+        // write enable signal for lower modules.
+        seg_we = (write_stb && (word_index == 2'b01));
+        uart_we = (write_stb && (word_index == 2'b10));
+        
+        case (word_index) 
+            2'b00:   wb_dat_o = {switches, leds};                      // Addr 0x0
+            2'b01:   wb_dat_o = 32'h0; // Readback handled by 7seg logic later
+            2'b10:   wb_dat_o = {22'b0, u_rx_valid, u_tx_busy, u_rx_data}; // Addr 0x8
+            2'b11:   wb_dat_o = {18'b0, d_buttons, p_ready, p_key_data}; // Addr 0xC
+            default: wb_dat_o = 32'h0;      
+        endcase 
+     end 
+     
+     // --- 2. REGISTERS & HANDSHAKE (Sequential) ---
+    always_ff @(posedge clk) begin
+        if (rst) begin
+            wb_ack_o <= 1'b0;
+            leds     <= 16'h0;
+        end else begin
+            // 1-Cycle Ack logic
+            wb_ack_o <= wb_stb_i && !wb_ack_o;
 
+            // Simple Output Registers
+            if (write_stb && (word_index == 2'b00))
+                leds <= wb_dat_i[15:0];
+        end
+    end
+    
 endmodule

@@ -1,4 +1,5 @@
 `timescale 1ns / 1ps
+(* keep_hierarchy = "yes" *)
 
 module instruction_memory #(
     parameter MEM_WORDS = 32768 // 128KB             
@@ -22,26 +23,34 @@ module instruction_memory #(
     logic [31:0] mem [0:MEM_WORDS-1];
     
     
-    initial begin
-      
-        $readmemh("C:/Users/amads/02144_riscV/RISC_V_GRP_10/RISC_V/RISC_V.srcs/sim_1/new/program.hex", mem);
-    end
+  
 
-    // --- Synchronous Logic ---
+     //--- Synchronous Logic ---
+//    always_ff @(posedge clk) begin
+//        if (rst) begin
+//            wb_ack_o <= 1'b0;
+//            wb_dat_o <= 32'h00000013; 
+//        end else begin
+            
+//            wb_ack_o <= wb_stb_i && !wb_ack_o;
+
+          
+//            if (wb_stb_i) begin
+               
+//                wb_dat_o <= mem[wb_adr_i[ADDR_BITS+1 : 2]];
+//            end
+//        end
+//    end
     always_ff @(posedge clk) begin
         if (rst) begin
             wb_ack_o <= 1'b0;
             wb_dat_o <= 32'h00000013; 
         end else begin
-            
-            wb_ack_o <= wb_stb_i && !wb_ack_o;
-
-          
+            // Acknowledge immediately to keep pipeline flowing
+            wb_ack_o <= wb_stb_i; 
             if (wb_stb_i) begin
-               
                 wb_dat_o <= mem[wb_adr_i[ADDR_BITS+1 : 2]];
             end
         end
     end
-
 endmodule

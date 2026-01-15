@@ -15,7 +15,7 @@ module io_manager (
     input  logic [15:0] switches,
     output logic [7:0]  segments,
     output logic [3:0]  anodes,
-    input  logic [4:0]  buttons,
+    input  logic [3:0]  buttons,
     output logic        uart_tx,
     input  logic        uart_rx,
     input  logic        ps2_clk, ps2_data

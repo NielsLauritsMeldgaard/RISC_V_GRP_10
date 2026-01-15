@@ -1,8 +1,6 @@
 `timescale 1ns / 1ps
 
-module EX #(
-    parameter MEM_WORDS = 1024
-)(
+module EX (
     // --- Global Control Signals ---
     input  logic        clk,               // System clock
     input  logic        rst,               // Global synchronous reset

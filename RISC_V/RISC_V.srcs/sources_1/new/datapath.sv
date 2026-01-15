@@ -14,14 +14,14 @@ module datapath #(
     input  logic        uart_rx,
     input  logic        ps2_clk,
     input  logic        ps2_data
-);
+) /* synthesis keep_hierarchy=yes */;
     // --- Global Control Signals ---
     logic stall;
     logic br_dec; 
     logic [1:0] aluFwdSrc; 
     logic [4:0] rs1, rs2;
     logic fwd_mem_data;
-
+    
     // --- Instruction Wishbone Bus (I-Bus) ---
     logic [31:0] iwb_adr, iwb_dat;
     logic        iwb_stb, iwb_ack;
@@ -55,7 +55,9 @@ module datapath #(
     logic        mToR, rW, rW_wb, aluSrc_id, branch_id;
 
     // --- 1. GLOBAL STALL LOGIC ---
-    assign stall = (iwb_stb && !iwb_ack) || (dwb_stb && !dwb_ack);
+    //assign stall = (iwb_stb && !iwb_ack) || (dwb_stb && !dwb_ack);
+    // iwb_ack is now 1, so we only stall when Data Memory (dwb) is busy
+    assign stall = (1'b1 && !iwb_ack) || ((mToR | dwb_we) && !dwb_ack);
 
     // --- 2. STAGE 1: INSTRUCTION FETCH (IF) ---
     IF_stage if_stage (
@@ -74,12 +76,12 @@ module datapath #(
         .ex_res(ex_res), .fwd_mem_wdata(fwd_mem_data), .branch_taken(br_dec),
         .dwb_adr_o(dwb_adr), .dwb_dat_o(dwb_dat_o), .dwb_sel_o(dwb_sel),
         .dwb_we_o(dwb_we), .dwb_stb_o(dwb_stb), .dwb_ack_i(dwb_ack),
-        .rs1_data(rs1_d), .rs2_immData(rs2_id), .imm_id_o(imm),
+        .rs1_data_o(rs1_d), .rs2_immData(rs2_id), .imm_id_o(imm),
         .pc_id_o(pc_id), .aluCtrl_id_o(aluOP), .memToReg_id_o(mToR),
         .regWrite_id_o(rW), .rd_addr_id_o(rd_id),
         .funct3_id_o(funct3_id), .addr_offset_id_o(addr_offset_id),
         .rs1_id_o(rs1), .rs2_id_o(rs2),
-        .aluSrc_id_o(aluSrc_id), .branch_id_o(branch_id)
+        .aluSrc2_id_o(aluSrc_id), .branch_id_o(branch_id)
     );
 
     // --- 4. STAGE 3: EXECUTE (EX) ---

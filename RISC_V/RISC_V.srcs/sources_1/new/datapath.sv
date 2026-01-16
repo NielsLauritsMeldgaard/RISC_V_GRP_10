@@ -1,3 +1,4 @@
+`timescale 1ns / 1ps
 module datapath #(
     parameter MEM_WORDS = 1024
 )(
@@ -56,17 +57,16 @@ module datapath #(
     logic [3:0]  s2_sel;
     logic        s2_we, s2_stb, s2_ack;
 
-    // Slave 2: VGA
-//    logic [31:0] s2_adr, s2_dat_w, s2_dat_r;
-//    logic [3:0]  s2_sel;
-//    logic        s2_we, s2_stb, s2_ack;
-
     // --- Pipeline Intermediate Wires ---
     logic [31:0] pc_w, instr_w, rs1_d, rs2_id, imm, pc_id, pc_ex, imm_ex, ex_res;
     logic [4:0]  aluOP, rd_id, rd_wb;
     logic [2:0]  funct3_id;
     logic [1:0]  addr_offset_id;
-    logic        mToR, rW, rW_wb, aluSrc_id, branch_id;
+    logic        mToR, rW, rW_wb, aluSrc_id, branch_id, jump;
+
+    // --- NEW: JALR Connection Wires ---
+    logic        is_jalr_id, jalr_taken_ex;
+    logic [31:0] jalr_target_ex;
 
     // --- 1. GLOBAL STALL LOGIC ---
     //assign stall = (iwb_stb && !iwb_ack) || (dwb_stb && !dwb_ack);
@@ -87,10 +87,14 @@ module datapath #(
         .pc_sel(br_dec), .pc_from_ex(pc_ex), .imm_from_ex(imm_ex),
         .iwb_adr_o(iwb_adr), .iwb_stb_o(iwb_stb),
         .iwb_dat_i(iwb_dat), .iwb_ack_i(iwb_ack),
-        .pc_if_o(pc_w), .instr_if_o(instr_w)
+        .pc_if_o(pc_w), .instr_if_o(instr_w), .pc_jump_sel(jump), .pc_from_id(pc_id),
+        
+        // --- NEW: JALR Feedback ---
+        .jalr_ex_sel(jalr_taken_ex),
+        .jalr_target_ex(jalr_target_ex)
     );
 
-    // --- 3. STAGE 2: INSTRUCTION DECODE (ID) ---
+       // --- 3. STAGE 2: INSTRUCTION DECODE (ID) ---
     ID id_stage (
         .clk(clk), .rst(rst_sync), .stall(stall),
         .instr_id_i(instr_w), .pc_id_i(pc_w),
@@ -103,9 +107,11 @@ module datapath #(
         .regWrite_id_o(rW), .rd_addr_id_o(rd_id),
         .funct3_id_o(funct3_id), .addr_offset_id_o(addr_offset_id),
         .rs1_id_o(rs1), .rs2_id_o(rs2),
-        .aluSrc2_id_o(aluSrc_id), .branch_id_o(branch_id)
+        .aluSrc2_id_o(aluSrc_id), .branch_id_o(branch_id),
+        .is_jump_id_o(jump),   // JAL signal
+        .is_jalr_id_o(is_jalr_id) // --- NEW: Pass JALR flag to EX ---
     );
-
+    
     // --- 4. STAGE 3: EXECUTE (EX) ---
     EX ex_stage (
         .clk(clk), .rst(rst_sync), .stall(stall),
@@ -115,9 +121,14 @@ module datapath #(
         .rd_addr_ex_i(rd_id), .funct3_ex_i(funct3_id), .addr_offset_ex_i(addr_offset_id),
         .aluFwdSrc(aluFwdSrc), .dwb_dat_i(dwb_dat_i), 
         .res_ex_o(ex_res), .rd_addr_ex_o(rd_wb), .regWrite_ex_o(rW_wb),
-        .pc_ex_o(pc_ex), .imm_ex_o(imm_ex), .br_dec_ex_o(br_dec)
+        .pc_ex_o(pc_ex), .imm_ex_o(imm_ex), .br_dec_ex_o(br_dec),
+        .jump(jump),  // Pass JAL signal
+        
+        // --- NEW: JALR Processing ---
+        .is_jalr_ex_i(is_jalr_id),      // From ID
+        .jalr_target_ex_o(jalr_target_ex), // To IF
+        .jalr_taken_ex_o(jalr_taken_ex)    // To IF
     );
-
     // --- 5. BUS INTERCONNECT ---
     iwb_interconnect iwb_bus_matrix (
         // Master: CPU Instruction Wishbone Bus
@@ -153,12 +164,6 @@ module datapath #(
         .s2_adr_o(s2_adr), .s2_dat_o(s2_dat_w), .s2_sel_o(s2_sel),
         .s2_we_o(s2_we), .s2_stb_o(s2_stb),
         .s2_dat_i(s2_dat_r), .s2_ack_i(s2_ack)
-        
-
-        // Slave 2: VGA
-//        .s2_adr_o(s2_adr), .s2_dat_o(s2_dat_w), .s2_sel_o(s2_sel),
-//        .s2_we_o(s2_we), .s2_stb_o(s2_stb),
-//        .s2_dat_i(s2_dat_r), .s2_ack_i(s2_ack)
     );
 
     // --- 6. SLAVE 1: IO PERIPHERAL MANAGER ---
@@ -200,10 +205,6 @@ module datapath #(
         .wb_adr_i(s0bb_adr), .wb_stb_i(s0bb_stb),
         .wb_dat_o(s0bb_dat), .wb_ack_o(s0bb_ack)
     );
-
-    // Slave 2 Placeholder (VGA)
-    //assign s2_ack_i = s2_stb_o; 
-    //assign s2_dat_i = 32'h0;
 
     // --- 9. FORWARDING UNIT ---
     forwarding_unit fwd_unit (

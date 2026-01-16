@@ -38,7 +38,7 @@ module EX (
     logic [4:0]  aluOP_reg, rd_reg;
     logic [2:0]  funct3_reg;
     logic [1:0]  addr_offset_reg;
-    logic        mToReg_reg, rWrite_reg;
+    logic        mToReg_reg, rWrite_reg, br_dec_ex;
     logic [1:0] aluFwdSrc_reg; 
 
     // --- Internal Wires ---
@@ -99,14 +99,15 @@ module EX (
         // D. Branch and Pass-through Assignments
         rd_addr_ex_o     = rd_reg; 
         regWrite_ex_o    = rWrite_reg;
-        br_dec_ex_o      = aluOP_reg[4] & aluRes[0]; // Branch Taken logic
+        br_dec_ex        = aluOP_reg[4] & aluRes[0]; // Branch Taken logic
+        br_dec_ex_o      = br_dec_ex;
         pc_ex_o          = pc_reg; 
         imm_ex_o         = imm_reg;
     end
     
     // --- 3. SEQUENTIAL LOGIC (Pipeline Registers) ---
     always_ff @(posedge clk) begin
-        if (rst) begin
+        if (rst || br_dec_ex) begin
             // Reset all pipeline registers to zero
             {rs1_reg, rs2_reg, pc_reg, imm_reg} <= '0;
             {aluOP_reg, rd_reg, funct3_reg, addr_offset_reg} <= '0;

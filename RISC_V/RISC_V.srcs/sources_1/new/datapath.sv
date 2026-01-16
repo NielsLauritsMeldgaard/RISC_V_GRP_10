@@ -7,7 +7,7 @@ module datapath #(
     // --- Physical FPGA I/O Pins ---
     output logic [15:0] leds,
     input  logic [15:0] switches,
-    output logic [7:0]  seven_seg_bits,   // Segments A-G + DP
+    output logic [6:0]  seven_seg_bits,   // Segments A-G + DP
     output logic [3:0]  seven_seg_anodes, // Digit selectors
     input  logic [4:0]  buttons,
     output logic        uart_tx,
@@ -22,9 +22,18 @@ module datapath #(
     logic [4:0] rs1, rs2;
     logic fwd_mem_data;
 
-    // --- Instruction Wishbone Bus (I-Bus) ---
+    // --- CPU Master Instruction Wishbone Bus (I-Bus) ---
     logic [31:0] iwb_adr, iwb_dat;
     logic        iwb_stb, iwb_ack;
+
+    // --- Interconnect Slave Wires for Instruction Memory ---
+    // Slave 0: bootloader ROM
+    logic [31:0] s0bb_adr, s0bb_dat;
+    logic        s0bb_stb, s0bb_ack;
+    
+    // Slave 1: Instruction RAM    
+    logic [31:0] s1im_adr, s1im_dat;
+    logic        s1im_stb, s1im_ack;
 
     // --- CPU Master Data Wishbone (M-Bus) ---
     logic [31:0] dwb_adr, dwb_dat_o, dwb_dat_i;
@@ -41,6 +50,11 @@ module datapath #(
     logic [31:0] s1_adr, s1_dat_w, s1_dat_r;
     logic [3:0]  s1_sel;
     logic        s1_we, s1_stb, s1_ack;
+    
+    // Slave 2: instruction ram
+    logic [31:0] s2_adr, s2_dat_w, s2_dat_r;
+    logic [3:0]  s2_sel;
+    logic        s2_we, s2_stb, s2_ack;
 
     // Slave 2: VGA
 //    logic [31:0] s2_adr, s2_dat_w, s2_dat_r;
@@ -95,7 +109,22 @@ module datapath #(
     );
 
     // --- 5. BUS INTERCONNECT ---
-    wb_interconnect bus_matrix (
+    iwb_interconnect iwb_bus_matrix (
+        // Master: CPU Instruction Wishbone Bus
+        .m_iwb_adr_i(iwb_adr), .m_iwb_stb_i(iwb_stb),
+        .m_iwb_dat_o(iwb_dat), .m_iwb_ack_o(iwb_ack),
+
+        // Slave 0: Bootloader ROM
+        .s0bb_adr_o(s0bb_adr), .s0bb_stb_o(s0bb_stb),
+        .s0bb_dat_i(s0bb_dat), .s0bb_ack_i(s0bb_ack),
+
+        // Slave 1: Instruction RAM
+        .s1im_adr_o(s1im_adr), .s1im_stb_o(s1im_stb),
+        .s1im_dat_i(s1im_dat), .s1im_ack_i(s1im_ack)
+    );
+    
+
+    dwb_interconnect dwb_bus_matrix (
         .m_adr_i(dwb_adr), .m_dat_i(dwb_dat_o), .m_sel_i(dwb_sel),
         .m_we_i(dwb_we), .m_stb_i(dwb_stb),
         .m_dat_o(dwb_dat_i), .m_ack_o(dwb_ack),
@@ -108,7 +137,13 @@ module datapath #(
         // Slave 1: IO Manager
         .s1_adr_o(s1_adr), .s1_dat_o(s1_dat_w), .s1_sel_o(s1_sel),
         .s1_we_o(s1_we), .s1_stb_o(s1_stb),
-        .s1_dat_i(s1_dat_r), .s1_ack_i(s1_ack)
+        .s1_dat_i(s1_dat_r), .s1_ack_i(s1_ack),
+        
+        // Slave 2: IRAM
+        .s2_adr_o(s2_adr), .s2_dat_o(s2_dat_w), .s2_sel_o(s2_sel),
+        .s2_we_o(s2_we), .s2_stb_o(s2_stb),
+        .s2_dat_i(s2_dat_r), .s2_ack_i(s2_ack)
+        
 
         // Slave 2: VGA
 //        .s2_adr_o(s2_adr), .s2_dat_o(s2_dat_w), .s2_sel_o(s2_sel),
@@ -137,11 +172,23 @@ module datapath #(
         .Rdata(s0_dat_r), .Ack(s0_ack)
     );
 
-    // --- 8. INSTRUCTION MEMORY (Master Interface) ---
+    // --- 8. INSTRUCTION MEMORY (Dual-Port) ---
     instruction_memory #(.MEM_WORDS(MEM_WORDS)) instr_mem (
         .clk(clk), .rst(rst),
-        .wb_adr_i(iwb_adr), .wb_stb_i(1'b1),
-        .wb_dat_o(iwb_dat), .wb_ack_o(iwb_ack) 
+        // PORT A: Write from Data WB (Bootloader writes via slave 2)
+        .a_dwb_adr_i(s2_adr), .a_dwb_dat_i(s2_dat_w), .a_dwb_sel_i(s2_sel),
+        .a_dwb_we_i(s2_we), .a_dwb_stb_i(s2_stb),
+        .a_dwb_dat_o(), .a_dwb_ack_o(s2_ack),
+        // PORT B: Read from Instr WB (CPU instruction fetch via slave 1)
+        .b_iwb_adr_i(s1im_adr), .b_iwb_stb_i(s1im_stb),
+        .b_iwb_dat_o(s1im_dat), .b_iwb_ack_o(s1im_ack)
+    );
+    
+    // --- 9. I-WB SLAVE 0: BOOTLOADER ROM ---
+    brom bootloader (
+        .clk(clk), .rst(rst),
+        .wb_adr_i(s0bb_adr), .wb_stb_i(s0bb_stb),
+        .wb_dat_o(s0bb_dat), .wb_ack_o(s0bb_ack)
     );
 
     // Slave 2 Placeholder (VGA)

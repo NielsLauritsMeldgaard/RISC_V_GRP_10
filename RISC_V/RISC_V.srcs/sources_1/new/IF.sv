@@ -50,6 +50,6 @@ module IF_stage(
     
     // --- 4. OUTPUTS TO ID STAGE ---
     // Use pc_delayed so that 'instr_if_o' matches its correct address
-    assign pc_if_o    = pc_next;   // PC associated with the instruction arriving on iwb_dat_i
+    assign pc_if_o    = pc_curr;   // PC associated with the instruction arriving on iwb_dat_i
     assign instr_if_o = iwb_dat_i;    // Bits arriving from memory
 endmodule

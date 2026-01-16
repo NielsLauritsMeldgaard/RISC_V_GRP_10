@@ -1,4 +1,5 @@
 `timescale 1ns / 1ps
+(* keep_hierarchy = "yes" *)
 
 module ID(
     // --- Global Control Signals ---
@@ -19,7 +20,7 @@ module ID(
     
     // --- I/O for Forwarding Control ---
     input  logic        fwd_mem_wdata,     // Logic to decide if ex_res should be forwarded to Store
-    output logic        aluSrc_id_o,
+    output logic        aluSrc2_id_o,
     output logic        branch_id_o,
     output logic [4:0]  rs1_id_o,             // source register 1: used only for forward hazard unit
     output logic [4:0]  rs2_id_o,             // source register 2: used only for forward hazard unit 
@@ -35,7 +36,7 @@ module ID(
     input  logic        dwb_ack_i,         // Acknowledge: Memory has finished the request
 
     // --- Pipeline Outputs to EX Stage ---
-    output logic [31:0] rs1_data,          // Data from source register 1
+    output logic [31:0] rs1_data_o,          // Data from source register 1
     output logic [31:0] rs2_immData,       // Muxed operand 2 (either rs2_data or immediate)
     output logic [31:0] imm_id_o,          // Sign-extended 32-bit immediate value
    
@@ -55,10 +56,10 @@ module ID(
 
     logic [6:0]  opcode;                   // Extracted opcode from IR
     logic [4:0]  rs1, rs2, rd;             // Extracted register addresses from IR
-    logic aluSrc, memToReg, regWrite, memWrite, branch; // Control flags
+    logic aluSrc1, aluSrc2, memToReg, regWrite, memWrite, branch; // Control flags
     logic [4:0] aluCtrl;                   // Combinational ALU opcode
     logic [2:0] imm_sel;                   // Selector for immediate generation type
-    logic [31:0] rs2_data;                 // Raw data from source register 2
+    logic [31:0] rs2_data, rs1_data ;                 // Raw data from source register 2 and 1
     logic [31:0] IR_next;                  // Combinational next state of the IR
     logic [31:0] Dmem_data;                // data for data memory from rs2
     // --- PIPELINE REGISTERS (IR and PC) ---
@@ -96,18 +97,21 @@ module ID(
          rs1_id_o = rs1;
          rs2_id_o = rs2;
         
-         
+    
          // 3. Decoder Defaults
-         aluSrc = 0; memToReg = 0; regWrite = 0; memWrite = 0; branch = 0; 
+         aluSrc1 = 0; aluSrc2 = 0; memToReg = 0; regWrite = 0; memWrite = 0; branch = 0; 
          aluCtrl = 5'b0; imm_sel = IMM_I; 
 
          // 4. Instruction Opcode Table
          case (opcode)
             7'b0110011: begin regWrite = 1; aluCtrl = {1'b0,IR[14:12],IR[30]}; end
-            7'b0010011: begin aluSrc = 1; regWrite = 1; aluCtrl = {1'b0,IR[14:12],1'b0}; end
-            7'b0000011: begin aluSrc = 1; memToReg = 1; regWrite = 1; end
-            7'b0100011: begin aluSrc = 1; memWrite = 1; imm_sel = IMM_S; end
+            7'b0010011: begin aluSrc2 = 1; regWrite = 1; 
+                aluCtrl = {1'b0, IR[14:12], (IR[14:12] == 3'b101) ? IR[30] : 1'b0}; imm_sel = IMM_I; end
+            7'b0000011: begin aluSrc2 = 1; memToReg = 1; regWrite = 1; end
+            7'b0100011: begin aluSrc2 = 1; memWrite = 1; imm_sel = IMM_S; end
             7'b1100011: begin branch = 1; aluCtrl = {1'b1,IR[14:12],1'b0}; imm_sel = IMM_B; end
+            7'b0110111: begin regWrite = 1; aluSrc2 = 1; imm_sel = IMM_U; aluCtrl = 5'b11111; end 
+            7'b0010111: begin regWrite = 1; aluSrc2 = 1; imm_sel = IMM_U; aluCtrl = 5'b00000; aluSrc1 = 1; end
             default: ;    
          endcase
 
@@ -116,6 +120,8 @@ module ID(
              IMM_I: imm_id_o = {{20{IR[31]}}, IR[31:20]};
              IMM_S: imm_id_o = {{20{IR[31]}}, IR[31:25], IR[11:7]};
              IMM_B: imm_id_o = {{19{IR[31]}}, IR[31], IR[7], IR[30:25], IR[11:8], 1'b0};
+             IMM_U: imm_id_o = {IR[31:12],12'b00};
+             IMM_J: imm_id_o = { {12{IR[31]}}, IR[19:12], IR[20], IR[30:21], 1'b0 }; 
              default: imm_id_o = 32'b0;
          endcase
          
@@ -130,10 +136,11 @@ module ID(
          funct3_id_o   = IR[14:12];
          addr_offset_id_o = dwb_adr_o[1:0];
          
-         rs2_immData = aluSrc ? imm_id_o : rs2_data; 
+         rs2_immData = aluSrc2 ? imm_id_o : rs2_data;
+         rs1_data_o  = aluSrc1 ? pc_id    : rs1_data;
          dwb_adr_o   = rs1_data + imm_id_o; 
          
-         aluSrc_id_o = aluSrc;
+         aluSrc2_id_o = aluSrc2;
          branch_id_o = branch;
          
     end

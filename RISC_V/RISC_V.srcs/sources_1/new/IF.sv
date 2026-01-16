@@ -1,8 +1,5 @@
 `timescale 1ns / 1ps
-
-module IF_stage #(
-    parameter MEM_WORDS = 1024
-)(
+module IF_stage(
     input  logic        clk,
     input  logic        rst,
     input  logic        stall,         // stall: stops registers when waiting for memory
@@ -11,21 +8,22 @@ module IF_stage #(
     input  logic        pc_sel,        // PC_select: high if branch taken; add PC from EX + imm from EX
     input  logic [31:0] pc_from_ex,    // PC from execute stage: pipelined back to match branch calc.,
     input  logic [31:0] imm_from_ex,   // immidiate value from EX stage: pipelined back
-
+    
     // --- Instruction Wishbone Master --- Harvard style with seperate instructions and data BUS 
     output logic [31:0] iwb_adr_o,     // Address to Bus
     output logic        iwb_stb_o,     // Strobe/Request to Bus
     input  logic [31:0] iwb_dat_i,     // Instruction from Bus
     input  logic        iwb_ack_i,     // Acknowledge from Bus
-
+    
     // --- Pipeline Outputs to ID Stage ---
     output logic [31:0] pc_if_o,       // Current PC in instruction fetch stage output
     output logic [31:0] instr_if_o     // instruction bits from IF stage output
-);
-
+    );
+    
     logic [31:0] pc_curr, pc_next;
+    logic [31:0] pc_delayed;                         // New: Aligns PC with synchronous memory data
     logic [31:0] adder_op_a, adder_op_b, adder_out;  // PC adder I/O
-
+    
     // --- 1. OPERATOR SHARING ADDER ---
     // Calculates either PC+4 (Normal) or Branch-Target (pc_ex + imm_ex)
     always_comb begin 
@@ -35,16 +33,18 @@ module IF_stage #(
         
         pc_next    = rst ? 32'h0 : adder_out; 
     end
-
-    // --- 2. THE PC REGISTER ---
-    // Freezes state if the 'stall' signal is high
+    
+    // --- 2. THE PC REGISTERS ---
+    // pc_curr: The address we are FETCHING now
+    // pc_delayed: The address of the instruction arriving from memory NOW
     always_ff @(posedge clk) begin
         if (rst) begin
-            pc_curr <= 32'h0;
+            pc_curr    <= 32'h0;
+            pc_delayed <= 32'h0;
         end else if (!stall) begin
-            pc_curr <= pc_next;
+            pc_curr    <= pc_next;
+            pc_delayed <= pc_curr; // Pipeline the PC to match the 1-cycle memory delay
         end
-        // If stall is high, pc_curr retains its previous value
     end
     
     // --- 3. WISHBONE BUS ASSIGNMENTS ---
@@ -52,7 +52,7 @@ module IF_stage #(
     assign iwb_stb_o  = 1'b1;         // Always requesting instructions
     
     // --- 4. OUTPUTS TO ID STAGE ---
-    assign pc_if_o    = pc_curr;      // PC to be captured in pc_id register
-    assign instr_if_o = iwb_dat_i;    // Bits to be captured in IR register
-
+    // Use pc_delayed so that 'instr_if_o' matches its correct address
+    assign pc_if_o    = pc_delayed;   // PC associated with the instruction arriving on iwb_dat_i
+    assign instr_if_o = iwb_dat_i;    // Bits arriving from memory
 endmodule

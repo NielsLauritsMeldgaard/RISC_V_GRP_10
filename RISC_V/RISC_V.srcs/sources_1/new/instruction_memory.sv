@@ -1,4 +1,5 @@
 `timescale 1ns / 1ps
+(* keep_hierarchy = "yes" *)
 
 // True dual port instruction memory
 // Read transactions is controlled with the WB-I interface (slave 1)

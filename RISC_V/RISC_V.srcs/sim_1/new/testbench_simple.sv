@@ -11,6 +11,8 @@
     end
     
     initial begin
+        rst = 1'b0;
+        #10;             // hold reset low
         rst = 1'b1;      // assert reset
         #10;             // hold reset
         rst = 1'b0;      // deassert reset    

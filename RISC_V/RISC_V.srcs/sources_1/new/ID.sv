@@ -155,8 +155,9 @@ module ID(
         endcase
     
         // B. Wishbone Handshake Logic
-        dwb_we_o  = memWrite; 
-        dwb_stb_o = (memToReg | memWrite);
+        // Gate memory transactions when branch is taken (instruction being flushed)
+        dwb_we_o  = memWrite & !branch_taken; 
+        dwb_stb_o = (memToReg | memWrite) & !branch_taken;
         dwb_cyc_o = dwb_stb_o;
         
         // C. Data Alignment for Stores

@@ -75,9 +75,11 @@ module datapath #(
     assign stall = 0;
     
     // Sync rst signal
-    logic rst_sync;
+    logic rst_sync, rst_reg, rst_reg_next;
+    assign rst_reg_next = rst;
+    assign rst_sync = rst_reg_next && !rst_reg; 
     always_ff @(posedge clk)
-        rst_sync <= rst;
+        rst_reg <= rst_reg_next;
 
     // --- 2. STAGE 1: INSTRUCTION FETCH (IF) ---
     IF_stage if_stage (

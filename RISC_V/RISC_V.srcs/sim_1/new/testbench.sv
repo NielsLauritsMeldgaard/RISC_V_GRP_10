@@ -19,8 +19,8 @@
      // ------------ Test control ------------
      // XSim runs from RISC_V/RISC_V.sim/sim_1/behav/xsim
      // So we need to go up 4 levels to reach RISC_V/, then into tests/
-     string test_root = "../../../../tests/";   // default root (relative to sim run dir)
-     string test = "task1/addpos";              // test name like "task1/addpos"
+     string test_root = "../../../../tests/";       // default root (relative to sim run dir)
+     string test = "task2/branchcnt";                // test name like "task1/addpos"
      int cycles = 10000000;                         // default max cycles per test
      int passed, failed;
      

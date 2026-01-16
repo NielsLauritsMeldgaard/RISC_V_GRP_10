@@ -71,7 +71,7 @@ module instruction_memory #(
             b_iwb_dat_o <= 32'h00000013; 
         end else begin
             // Wishbone Handshake
-            b_iwb_ack_o <= b_iwb_stb_i && !b_iwb_ack_o;
+            b_iwb_ack_o <= b_iwb_stb_i;
 
             // Read Logic
             if (b_iwb_stb_i) begin               

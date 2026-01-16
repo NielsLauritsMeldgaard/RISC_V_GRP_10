@@ -9,7 +9,7 @@ module datapath #(
     input  logic [15:0] switches,
     output logic [6:0]  seven_seg_bits,   // Segments A-G + DP
     output logic [3:0]  seven_seg_anodes, // Digit selectors
-    input  logic [4:0]  buttons,
+    input  logic [3:0]  buttons,
     output logic        uart_tx,
     input  logic        uart_rx,
     input  logic        ps2_clk,
@@ -71,11 +71,17 @@ module datapath #(
     // --- 1. GLOBAL STALL LOGIC ---
     //assign stall = (iwb_stb && !iwb_ack) || (dwb_stb && !dwb_ack);
     // iwb_ack is now 1, so we only stall when Data Memory (dwb) is busy
-    assign stall = (1'b1 && !iwb_ack) || ((mToR | dwb_we) && !dwb_ack);
+    //assign stall = (1'b1 && !iwb_ack) || ((mToR | dwb_we) && !dwb_ack);
+    assign stall = 0;
+    
+    // Sync rst signal
+    logic rst_sync;
+    always_ff @(posedge clk)
+        rst_sync <= rst;
 
     // --- 2. STAGE 1: INSTRUCTION FETCH (IF) ---
     IF_stage if_stage (
-        .clk(clk), .rst(rst), .stall(stall),
+        .clk(clk), .rst(rst_sync), .stall(stall),
         .pc_sel(br_dec), .pc_from_ex(pc_ex), .imm_from_ex(imm_ex),
         .iwb_adr_o(iwb_adr), .iwb_stb_o(iwb_stb),
         .iwb_dat_i(iwb_dat), .iwb_ack_i(iwb_ack),
@@ -84,7 +90,7 @@ module datapath #(
 
     // --- 3. STAGE 2: INSTRUCTION DECODE (ID) ---
     ID id_stage (
-        .clk(clk), .rst(rst), .stall(stall),
+        .clk(clk), .rst(rst_sync), .stall(stall),
         .instr_id_i(instr_w), .pc_id_i(pc_w),
         .rd_data_wb(ex_res), .rd_addr_wb(rd_wb), .regWrite_wb(rW_wb),
         .ex_res(ex_res), .fwd_mem_wdata(fwd_mem_data), .branch_taken(br_dec),
@@ -100,7 +106,7 @@ module datapath #(
 
     // --- 4. STAGE 3: EXECUTE (EX) ---
     EX ex_stage (
-        .clk(clk), .rst(rst), .stall(stall),
+        .clk(clk), .rst(rst_sync), .stall(stall),
         .rs1_val_reg_next(rs1_d), .rs2_imm_reg_next(rs2_id),
         .pc_ex_i(pc_id), .imm_ex_i(imm),
         .aluOP_ex_i(aluOP), .memToReg_ex_i(mToR), .regWrite_ex_i(rW),
@@ -155,7 +161,7 @@ module datapath #(
 
     // --- 6. SLAVE 1: IO PERIPHERAL MANAGER ---
     io_manager peripherals (
-        .clk(clk), .rst(rst),
+        .clk(clk), .rst(rst_sync),
         // wishbone slave interface (CPU side)
         .wb_adr_i(s1_adr), .wb_dat_i(s1_dat_w), .wb_stb_i(s1_stb),
         .wb_we_i(s1_we), .wb_dat_o(s1_dat_r), .wb_ack_o(s1_ack),
@@ -168,7 +174,7 @@ module datapath #(
 
     // --- 7. SLAVE 0: DATA RAM ---
     data_memory #(.MEM_WORDS(MEM_WORDS)) data_mem (
-        .clk(clk), .rst(rst),
+        .clk(clk), .rst(rst_sync),
         .addr(s0_adr), .Wdata(s0_dat_w), .sel(s0_sel),
         .En(s0_stb && !s0_we), .We(s0_stb && s0_we),
         .Rdata(s0_dat_r), .Ack(s0_ack)
@@ -176,7 +182,7 @@ module datapath #(
 
     // --- 8. INSTRUCTION MEMORY (Dual-Port) ---
     instruction_memory #(.MEM_WORDS(MEM_WORDS)) instr_mem (
-        .clk(clk), .rst(rst),
+        .clk(clk), .rst(rst_sync),
         // PORT A: Write from Data WB (Bootloader writes via slave 2)
         .a_dwb_adr_i(s2_adr), .a_dwb_dat_i(s2_dat_w), .a_dwb_sel_i(s2_sel),
         .a_dwb_we_i(s2_we), .a_dwb_stb_i(s2_stb),
@@ -188,7 +194,7 @@ module datapath #(
     
     // --- 9. I-WB SLAVE 0: BOOTLOADER ROM ---
     brom bootloader (
-        .clk(clk), .rst(rst),
+        .clk(clk), .rst(rst_sync),
         .wb_adr_i(s0bb_adr), .wb_stb_i(s0bb_stb),
         .wb_dat_o(s0bb_dat), .wb_ack_o(s0bb_ack)
     );

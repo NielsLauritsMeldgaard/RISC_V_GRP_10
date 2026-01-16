@@ -21,7 +21,6 @@ module IF_stage(
     );
     
     logic [31:0] pc_curr, pc_next;
-    logic [31:0] pc_delayed;                         // New: Aligns PC with synchronous memory data
     logic [31:0] adder_op_a, adder_op_b, adder_out;  // PC adder I/O
     
     // --- 1. OPERATOR SHARING ADDER ---
@@ -40,19 +39,17 @@ module IF_stage(
     always_ff @(posedge clk) begin
         if (rst) begin
             pc_curr    <= 32'h0;
-            pc_delayed <= 32'h0;
         end else if (!stall) begin
             pc_curr    <= pc_next;
-            pc_delayed <= pc_curr; // Pipeline the PC to match the 1-cycle memory delay
         end
     end
     
     // --- 3. WISHBONE BUS ASSIGNMENTS ---
-    assign iwb_adr_o  = pc_curr;
+    assign iwb_adr_o  = pc_next;
     assign iwb_stb_o  = 1'b1;         // Always requesting instructions
     
     // --- 4. OUTPUTS TO ID STAGE ---
     // Use pc_delayed so that 'instr_if_o' matches its correct address
-    assign pc_if_o    = pc_delayed;   // PC associated with the instruction arriving on iwb_dat_i
+    assign pc_if_o    = pc_next;   // PC associated with the instruction arriving on iwb_dat_i
     assign instr_if_o = iwb_dat_i;    // Bits arriving from memory
 endmodule

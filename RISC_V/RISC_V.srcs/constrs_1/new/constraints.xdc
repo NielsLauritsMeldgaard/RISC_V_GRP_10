@@ -53,7 +53,7 @@ set_property -dict { PACKAGE_PIN V8   IOSTANDARD LVCMOS33 } [get_ports {seven_se
 set_property -dict { PACKAGE_PIN U5   IOSTANDARD LVCMOS33 } [get_ports {seven_seg_bits[4]}]
 set_property -dict { PACKAGE_PIN V5   IOSTANDARD LVCMOS33 } [get_ports {seven_seg_bits[5]}]
 set_property -dict { PACKAGE_PIN U7   IOSTANDARD LVCMOS33 } [get_ports {seven_seg_bits[6]}]
-set_property -dict { PACKAGE_PIN V7   IOSTANDARD LVCMOS33 } [get_ports {seven_seg_bits[7]}]
+#set_property -dict { PACKAGE_PIN V7   IOSTANDARD LVCMOS33 } [get_ports {seven_seg_bits[7]}]
 
 ## 7 Segment Anodes (Digit Selectors)
 set_property -dict { PACKAGE_PIN U2   IOSTANDARD LVCMOS33 } [get_ports {seven_seg_anodes[0]}]
@@ -63,10 +63,10 @@ set_property -dict { PACKAGE_PIN W4   IOSTANDARD LVCMOS33 } [get_ports {seven_se
 
 ## Buttons (Mapped to buttons[4:0])
 ## 0=Center (used for rst above), 1=Up, 2=Left, 3=Right, 4=Down
-set_property -dict { PACKAGE_PIN T18   IOSTANDARD LVCMOS33 } [get_ports {buttons[1]}]
-set_property -dict { PACKAGE_PIN W19   IOSTANDARD LVCMOS33 } [get_ports {buttons[2]}]
-set_property -dict { PACKAGE_PIN T17   IOSTANDARD LVCMOS33 } [get_ports {buttons[3]}]
-set_property -dict { PACKAGE_PIN U17   IOSTANDARD LVCMOS33 } [get_ports {buttons[4]}]
+set_property -dict { PACKAGE_PIN T18   IOSTANDARD LVCMOS33 } [get_ports {buttons[0]}]
+set_property -dict { PACKAGE_PIN W19   IOSTANDARD LVCMOS33 } [get_ports {buttons[1]}]
+set_property -dict { PACKAGE_PIN T17   IOSTANDARD LVCMOS33 } [get_ports {buttons[2]}]
+set_property -dict { PACKAGE_PIN U17   IOSTANDARD LVCMOS33 } [get_ports {buttons[3]}]
 
 
 ## USB-RS232 Interface (UART)

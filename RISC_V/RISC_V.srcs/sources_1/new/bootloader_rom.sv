@@ -4,7 +4,8 @@ module brom #(
     //@TODO: Write bootloader program and find correct program size
     parameter MEM_WORDS = 128, // 128 instructions
     //parameter BOOTROM_FILE = "../../../../tests/task1/addpos.mem"
-    parameter BOOTROM_FILE = "../../../../bootloader/bootloader.mem"
+    //parameter BOOTROM_FILE = "../../../../bootloader/bootloader.mem"
+    parameter BOOTROM_FILE = "program.mem"
 )(
     input  logic         clk,
     input  logic         rst,              
@@ -31,19 +32,19 @@ module brom #(
 
     // --- Synchronous Logic ---
     always_ff @(posedge clk) begin
-        if (rst) begin
-            wb_ack_o <= 1'b0;
-            wb_dat_o <= 32'h00000013; 
-        end else begin
+//        if (rst) begin
+//            wb_ack_o <= 1'b0;
+//            //wb_dat_o <= 32'h00000013; 
+//        end else begin
             
-            wb_ack_o <= wb_stb_i && !wb_ack_o;
+            wb_ack_o <= wb_stb_i;
 
           
             if (wb_stb_i) begin
                
                 wb_dat_o <= mem[wb_adr_i[ADDR_BITS+1 : 2]];
             end
-        end
+        // end
     end
 
 endmodule

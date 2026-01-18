@@ -32,8 +32,8 @@ module data_memory #(
             Ack   <= 1'b0;
         end else begin
             // 1. Wishbone Handshake
-            // Ensures Ack is a 1-cycle pulse even if CPU stalls with En=1
-            Ack <= (En | We) && !Ack;
+            // Allow multiple cycles if needed (if sw and lw for same address in sequence)
+            Ack <= (En | We);
 
             // 2. Read Logic
             if (En) begin

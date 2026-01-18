@@ -77,8 +77,8 @@ module io_manager (
             wb_ack_o <= 1'b0;
             leds     <= 16'h0;
         end else begin
-            // 1-Cycle Ack logic
-            wb_ack_o <= wb_stb_i && !wb_ack_o;
+            // multi-Cycle Ack logic
+            wb_ack_o <= wb_stb_i;
 
             // Simple Output Registers
             if (write_stb && (word_index == 2'b00))

@@ -52,7 +52,7 @@ module instruction_memory #(
             a_dwb_ack_o <= 1'b0;
         end else begin
             // Wishbone Handshake
-            a_dwb_ack_o <= (a_dwb_stb_i & a_dwb_we_i) && !a_dwb_ack_o;
+            a_dwb_ack_o <= (a_dwb_stb_i & a_dwb_we_i); // Ack only for write requests
 
             // Write Logic (Byte-Selective)
             if (a_dwb_we_i) begin

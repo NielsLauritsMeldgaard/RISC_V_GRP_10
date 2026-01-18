@@ -69,22 +69,22 @@ module dwb_interconnect(
             //0b0001_0000_0000_0000_0000_0000_0000_0000
             4'h1: begin // Instruction address space: @0x1000_0000 to 0x1FFF_FFFF (Only used in bootloader)
                 s2_stb_o = m_stb_i;
-                m_dat_o  = s2_dat_i;
-                m_ack_o  = s2_ack_i;               
+                //m_dat_o  = s2_dat_i;
+                //m_ack_o  = s2_ack_i;               
             end
             
             //0b0010_0000_0000_0000_0000_0000_0000_0000
             4'h2: begin // data ram address space: @0x2000_0000 to 2FFF_FFFF
                 s0_stb_o = m_stb_i;
-                m_dat_o  = s0_dat_i;
-                m_ack_o  = s0_ack_i; 
+//                m_dat_o  = s0_dat_i;
+//                m_ack_o  = s0_ack_i; 
             end
             
             //0b0100_0000_0000_0000_0000_0000_0000_0000
             4'h4: begin // general I/O peripherals address space: 4000_0000 to 4FFF_FFFF
                 s1_stb_o = m_stb_i;
-                m_dat_o  = s1_dat_i; //send data from IO to CPU
-                m_ack_o  = s1_ack_i; // acknowledge from io that data has been recieved to reg, so continue processing
+                //m_dat_o  = s1_dat_i; //send data from IO to CPU
+                //m_ack_o  = s1_ack_i; // acknowledge from io that data has been recieved to reg, so continue processing
             end
             
     //        4'h2: begin // VGA peripherals
@@ -98,6 +98,18 @@ module dwb_interconnect(
                 end
         
         endcase 
+        
+        if (s0_ack_i) begin
+            m_ack_o = 1'b1;
+            m_dat_o = s0_dat_i;
+        end else if (s1_ack_i) begin
+            m_ack_o = 1'b1;
+            m_dat_o = s1_dat_i;
+        end else if (s2_ack_i) begin
+            m_ack_o = 1'b1;
+            m_dat_o = s2_dat_i;
+        end
+        
     end
     
 endmodule

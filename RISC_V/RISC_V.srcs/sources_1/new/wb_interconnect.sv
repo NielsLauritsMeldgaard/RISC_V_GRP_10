@@ -99,6 +99,7 @@ module dwb_interconnect(
         
         endcase 
         
+        // Read data muxing (added to ensure correct data is sent to cpu and not overwritten)
         if (s0_ack_i) begin
             m_ack_o = 1'b1;
             m_dat_o = s0_dat_i;

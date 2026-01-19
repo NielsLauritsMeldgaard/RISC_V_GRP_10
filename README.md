@@ -223,12 +223,12 @@ We have provided a Python script in `tests/patch_mem.py`. This script rewrites t
 
 **Usage:**
 ```bash
-# Syntax: python tests/patch_mem.py <input_mem> <output_mem> <new_base_address_hex>
+# Syntax: python patch_mem.py <input_mem> <output_mem> <new_base_address_hex>
 
 # Example: Changing base to 0x00010000
-python tests/patch_mem.py gcd_std.mem gcd_mycpu.mem 0x00010000
+python patch_mem.py gcd_std.mem gcd_mycpu.mem 0x00010000
 ```
-*Note: Your base address must be 4KB aligned (hex ending in 000).*
+
 
 ## Contributors
 Group 10

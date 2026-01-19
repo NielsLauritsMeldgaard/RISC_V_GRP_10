@@ -22,11 +22,12 @@ module io_manager (
 );
     // --- Internal Wires ---
     logic [1:0] word_index;
-    logic       write_stb;
-    logic       seg_we, uart_we;
+    logic       write_stb, read_stb;
+    logic       seg_we, uart_we, uart_re;
     logic [7:0] u_rx_data, p_key_data;
     logic       u_rx_valid, u_tx_busy, p_ready;
     logic [3:0] d_buttons;
+    logic [31:0] wb_dat_o_next;
     
     // --- 3. SUB-MODULE INSTANTIATIONS ---
 
@@ -39,6 +40,7 @@ module io_manager (
     uart_controller uart_unit (
         .clk(clk), .rst(rst),
         .tx_data_i(wb_dat_i[7:0]), .tx_we_i(uart_we),
+        .rx_read_i(uart_re),
         .rx_data_o(u_rx_data), .rx_valid_o(u_rx_valid), .tx_busy_o(u_tx_busy),
         .uart_tx_pin(uart_tx), .uart_rx_pin(uart_rx)
     );
@@ -57,17 +59,19 @@ module io_manager (
         // defaults 
         word_index = wb_adr_i[3:2];
         write_stb  = wb_stb_i && wb_we_i;
+        read_stb   = wb_stb_i && !wb_we_i;
         
         // write enable signal for lower modules.
         seg_we = (write_stb && (word_index == 2'b01));
         uart_we = (write_stb && (word_index == 2'b10));
+        uart_re = (read_stb && (word_index == 2'b10));
         
         case (word_index) 
-            2'b00:   wb_dat_o = {switches, leds};                      // Addr 0x0
-            2'b01:   wb_dat_o = 32'h0; // Readback handled by 7seg logic later
-            2'b10:   wb_dat_o = {22'b0, u_rx_valid, u_tx_busy, u_rx_data}; // Addr 0x8
-            2'b11:   wb_dat_o = {18'b0, d_buttons, p_ready, p_key_data}; // Addr 0xC
-            default: wb_dat_o = 32'h0;      
+            2'b00:   wb_dat_o_next = {switches, leds};                      // Addr 0x0
+            2'b01:   wb_dat_o_next = 32'h0; // Readback handled by 7seg logic later
+            2'b10:   wb_dat_o_next = {22'b0, u_rx_valid, u_tx_busy, u_rx_data}; // Addr 0x8
+            2'b11:   wb_dat_o_next = {18'b0, d_buttons, p_ready, p_key_data}; // Addr 0xC
+            default: wb_dat_o_next = 32'h0;      
         endcase 
      end 
      
@@ -76,9 +80,11 @@ module io_manager (
         if (rst) begin
             wb_ack_o <= 1'b0;
             leds     <= 16'h0;
+            wb_dat_o <= 31'b0;
         end else begin
             // multi-Cycle Ack logic
             wb_ack_o <= wb_stb_i;
+            wb_dat_o <= wb_dat_o_next;
 
             // Simple Output Registers
             if (write_stb && (word_index == 2'b00))

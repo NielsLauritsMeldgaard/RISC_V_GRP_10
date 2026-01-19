@@ -193,7 +193,7 @@ module datapath #(
         // PORT A: Write from Data WB (Bootloader writes via slave 2)
         .a_dwb_adr_i(s2_adr), .a_dwb_dat_i(s2_dat_w), .a_dwb_sel_i(s2_sel),
         .a_dwb_we_i(s2_we), .a_dwb_stb_i(s2_stb),
-        .a_dwb_dat_o(), .a_dwb_ack_o(s2_ack),
+        .a_dwb_dat_o(s2_dat_r), .a_dwb_ack_o(s2_ack),
         // PORT B: Read from Instr WB (CPU instruction fetch via slave 1)
         .b_iwb_adr_i(s1im_adr), .b_iwb_stb_i(s1im_stb),
         .b_iwb_dat_o(s1im_dat), .b_iwb_ack_o(s1im_ack)

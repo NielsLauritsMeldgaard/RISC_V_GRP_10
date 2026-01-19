@@ -7,8 +7,9 @@ module uart_controller   #(parameter BAUD_RATE = 115200, CLK_FREQ = 100_000_000)
     input  logic        clk, rst,
     input  logic [7:0]  tx_data_i,   // Byte to send
     input  logic        tx_we_i,     // Start transmission
+    input  logic        rx_read_i,   // Read strobe from CPU to clear valid flag
     output logic [7:0]  rx_data_o,   // Byte received
-    output logic        rx_valid_o,  // New data available
+    output logic        rx_valid_o,  // New data available (latched until read)
     output logic        tx_busy_o,   // UART is currently sending
     output logic        uart_tx_pin, // Physical TX wire
     input  logic        uart_rx_pin  // Physical RX wire
@@ -27,7 +28,7 @@ module uart_controller   #(parameter BAUD_RATE = 115200, CLK_FREQ = 100_000_000)
     );
     
     logic rx_valid;
-    logic [7:0] rx_data_reg, rx_data_reg_next, rx_data_o_wire;
+    logic [7:0] rx_data_o_wire;
     uart_rx #(
         .BAUD_RATE(BAUD_RATE),
         .CLK_FREQ(CLK_FREQ)
@@ -39,18 +40,27 @@ module uart_controller   #(parameter BAUD_RATE = 115200, CLK_FREQ = 100_000_000)
         .rx_data_o(rx_data_o_wire)
     );
     
-    always_comb begin
-        rx_valid_o = rx_valid;
-        rx_data_reg_next = rx_valid ? rx_data_o_wire : rx_data_reg; // LATCH DATA IF VALID
-        rx_data_o = rx_data_reg; 
+    // Latch rx_valid and rx_data until CPU reads
+    logic rx_valid_latched;
+    
+    always_ff @(posedge clk) begin
+        if (rst) begin
+            rx_valid_latched <= 1'b0;
+            rx_data_o <= 8'h0;
+        end else begin
+            // New byte arrived: latch data and set valid flag
+            if (rx_valid) begin
+                rx_data_o <= rx_data_o_wire;
+                rx_valid_latched <= 1'b1;
+            end 
+            // CPU read: clear valid flag
+            else if (rx_read_i) begin
+                rx_valid_latched <= 1'b0;
+            end
+        end
     end
     
-    always_ff @(posedge clk or posedge rst) begin
-        if (rst)
-            rx_data_reg <= 0;
-        else
-            rx_data_reg <= rx_data_reg_next;    
-    end    
+    assign rx_valid_o = rx_valid_latched;    
     
 endmodule
 
@@ -243,6 +253,7 @@ module uart_tx #(
                     tx_data_shiftreg_next = tx_data_i;
                     tx_bit_idx_next = 0;
                     tx_next_state = START;
+                    baud_counter_next = 0; // Reset counter to ensure full Start Bit duration
                 end
             end
             

@@ -229,20 +229,13 @@ x10 := 0x00000004
 x11 := 0x00000004
 x18 := 0x20000018
 
-yaml
-Kopier kode
-
 ---
 
 #### Data Memory Contents
 
 Let:
-
 baseAddr = 0x20000000
-
-wasm
-Kopier kode
-
+then:
 Expected memory layout:
 
 DataMem:

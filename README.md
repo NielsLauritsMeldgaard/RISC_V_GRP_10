@@ -214,6 +214,52 @@ fff48493
 fcdff06f
 00000073
 ```
+### Expected Final State (After Program Completion)
+
+After correct execution of the GCD benchmark, the processor must reach the following architectural state.
+
+---
+
+#### Register File (Hexadecimal)
+
+x5 := 0x0000000C
+x6 := 0x00000010
+x8 := 0x20000000
+x10 := 0x00000004
+x11 := 0x00000004
+x18 := 0x20000018
+
+yaml
+Kopier kode
+
+---
+
+#### Data Memory Contents
+
+Let:
+
+baseAddr = 0x20000000
+
+wasm
+Kopier kode
+
+Expected memory layout:
+
+DataMem:
+
+0x00 (baseAddr) := 0x00000002
+0x04 (baseAddr) := 0x00000000
+
+0x08 (baseAddr) := 0x000000FA
+0x0C (baseAddr) := 0x00000000
+
+0x10 (baseAddr) := 0x0000001B
+0x14 (baseAddr) := 0x00000000
+
+0x18 (baseAddr) := 0x00000004
+0x1C (baseAddr) := 0x00000000
+
+---
 
 ### Adapting to Your Address Space (Patching)
 If your processor design uses a different Data Memory base (e.g., `0x00010000` or `0x80000000`), the standard machine code will fail because the first instruction (`li s0, BASE`) will point to the wrong location.

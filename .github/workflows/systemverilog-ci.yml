@@ -61,11 +61,12 @@ jobs:
           sudo apt-get install -y verilator
           verilator --version
 
-      - name: Run gcd_benchmark test
+      - name: Run Tests
         run: |
           cd tests/verilator_simulation
           chmod +x run_test.sh
-          ./run_test.sh
+          TEST=task1/addlarge ./run_test.sh
+          TEST=task1/addpos ./run_test.sh
 
       - name: Report test results
         if: always()

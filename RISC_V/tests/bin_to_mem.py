@@ -25,10 +25,6 @@ def bin_to_mem(src: Path, dst: Path, word_bytes: int = 4) -> None:
 		# Little-endian bytes to integer word
 		word = int.from_bytes(chunk, byteorder="little", signed=False)
 		words.append(f"{word:0{word_bytes*2}x}")
-		
-		# Stop after ECALL (opcode 0x73 = 0x00000073)
-		if word == 0x00000073:
-			break
 
 	dst.write_text("\n".join(words) + "\n")
 

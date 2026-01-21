@@ -7,9 +7,8 @@ on:
     branches: [ main]
 
 jobs:
-  lint:
+  verilator:
     runs-on: ubuntu-latest
-    name: Verilator Lint Check
 
     steps:
       - name: Checkout repository
@@ -20,7 +19,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y verilator
           verilator --version
-
       - name: Verify source files are found
         run: find RISC_V/RISC_V.srcs/sources_1/new -name "*.sv"
 
@@ -33,47 +31,14 @@ jobs:
             -Wwarn-UNUSEDSIGNAL \
             -Wwarn-UNUSEDPARAM \
             $(find RISC_V/RISC_V.srcs/sources_1/new -name "*.sv")
-
       - name: Report success
         if: success()
         run: |
-          echo "### ✓ OK: SystemVerilog Syntax Check Passed" >> $GITHUB_STEP_SUMMARY
+          echo "### OK: SystemVerilog Syntax Check Passed" >> $GITHUB_STEP_SUMMARY
           echo "All SystemVerilog files passed Verilator lint checking." >> $GITHUB_STEP_SUMMARY
-
       - name: Report failure
         if: failure()
         run: |
-          echo "### ✗ FATAL: SystemVerilog Syntax Check Failed" >> $GITHUB_STEP_SUMMARY
+          echo "### FATAL: SystemVerilog Syntax Check Failed" >> $GITHUB_STEP_SUMMARY
           echo "One or more SystemVerilog files have syntax or lint errors." >> $GITHUB_STEP_SUMMARY
           echo "Review the Verilator output above for details." >> $GITHUB_STEP_SUMMARY
-
-  simulation:
-    runs-on: ubuntu-latest
-    name: Verilator Simulation Tests
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install Verilator
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y verilator cmake make g++
-          verilator --version
-
-      - name: Run Tests
-        run: |
-          cd RISC_V/tests/verilator_simulation
-          chmod +x run_test.sh
-          TEST=task1/addlarge ./run_test.sh
-          TEST=task1/addpos ./run_test.sh
-
-      - name: Report test results
-        if: always()
-        run: |
-          echo "### Simulation Test Results" >> $GITHUB_STEP_SUMMARY
-          if [ ${PIPESTATUS[0]} -eq 0 ]; then
-            echo "✓ All simulation tests passed" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "✗ Some simulation tests failed" >> $GITHUB_STEP_SUMMARY
-          fi

@@ -25,7 +25,7 @@ module system_clock_gen (
      
      // CLK 2: 200 MHz (RAM - Shifted)
      .CLKOUT2_DIVIDE(4),      
-     .CLKOUT2_PHASE(180.0)    // <--- CHANGED TO 180.0 FOR SAFETY
+     .CLKOUT2_PHASE(180.0)    // <--- CHANGED TO 180.0 
   )
   PLLE2_BASE_inst (
      // Outputs

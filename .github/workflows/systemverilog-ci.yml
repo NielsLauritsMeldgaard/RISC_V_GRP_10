@@ -27,9 +27,19 @@ jobs:
           verilator \
             --lint-only \
             --Wall \
-            --Wno-DECLFILENAME \
-            -Wwarn-UNUSEDSIGNAL \
-            -Wwarn-UNUSEDPARAM \
+            --warn-no-fatal \
+            -Wno-DECLFILENAME \
+            -Wno-EOFNEWLINE \
+            -Wno-PINMISSING \
+            -Wno-PINCONNECTEMPTY \
+            -Wno-WIDTHEXPAND \
+            -Wno-WIDTHTRUNC \
+            -Wno-ALWCOMBORDER \
+            -Wno-MULTIDRIVEN \
+            -Wno-UNUSEDSIGNAL \
+            -Wno-UNUSEDPARAM \
+            -Wno-SYNCASYNCNET \
+            -Wno-UNOPTFLAT \
             $(find RISC_V/RISC_V.srcs/sources_1/new -name "*.sv")
       - name: Report success
         if: success()

@@ -1,18 +1,9 @@
-	.file	"loop.c"
-	.option nopic
-	.attribute arch, "rv32i2p0"
-	.attribute unaligned_access, 0
-	.attribute stack_align, 16
-	.text
- #APP
-	li sp, 0x100000
+
+	li sp, 0x20000FFC
 	jal main
 	li a7, 10
 	ecall
- #NO_APP
-	.align	2
-	.globl	sum
-	.type	sum, @function
+
 sum:
 	addi	sp,sp,-48
 	sw	s0,44(sp)
@@ -21,8 +12,8 @@ sum:
 	sw	a1,-40(s0)
 	sw	zero,-20(s0)
 	sw	zero,-24(s0)
-	j	.L2
-.L3:
+	j	L2
+L3:
 	lw	a5,-24(s0)
 	slli	a5,a5,2
 	lw	a4,-36(s0)
@@ -34,19 +25,16 @@ sum:
 	lw	a5,-24(s0)
 	addi	a5,a5,1
 	sw	a5,-24(s0)
-.L2:
+L2:
 	lw	a4,-24(s0)
 	lw	a5,-40(s0)
-	blt	a4,a5,.L3
+	blt	a4,a5,L3
 	lw	a5,-20(s0)
 	mv	a0,a5
 	lw	s0,44(sp)
 	addi	sp,sp,48
 	jr	ra
-	.size	sum, .-sum
-	.align	2
-	.globl	main
-	.type	main, @function
+
 main:
 	addi	sp,sp,-32
 	sw	ra,28(sp)
@@ -86,8 +74,8 @@ main:
 	slli	a5,a5,2
 	sw	a5,-32(s0)
 	sw	zero,-20(s0)
-	j	.L6
-.L7:
+	j	L6
+L7:
 	lw	a4,-32(s0)
 	lw	a5,-20(s0)
 	slli	a5,a5,2
@@ -97,10 +85,10 @@ main:
 	lw	a5,-20(s0)
 	addi	a5,a5,1
 	sw	a5,-20(s0)
-.L6:
+L6:
 	lw	a4,-20(s0)
 	lw	a5,-24(s0)
-	blt	a4,a5,.L7
+	blt	a4,a5,L7
 	lw	a1,-24(s0)
 	lw	a0,-32(s0)
 	call	sum
@@ -113,5 +101,4 @@ main:
 	lw	s1,20(sp)
 	addi	sp,sp,32
 	jr	ra
-	.size	main, .-main
-	.ident	"GCC: (SiFive GCC 10.1.0-2020.08.2) 10.1.0"
+

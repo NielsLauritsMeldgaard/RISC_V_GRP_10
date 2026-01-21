@@ -27,7 +27,7 @@ jobs:
           verilator \
             --lint-only \
             --Wall \
-            --warn-no-fatal \
+            --Wno-fatal \
             -Wno-DECLFILENAME \
             -Wno-EOFNEWLINE \
             -Wno-PINMISSING \

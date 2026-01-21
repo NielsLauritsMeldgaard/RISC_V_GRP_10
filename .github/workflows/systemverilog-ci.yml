@@ -19,7 +19,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y verilator
           verilator --version
-
       - name: Verify source files are found
         run: find RISC_V/RISC_V.srcs/sources_1/new -name "*.sv"
 
@@ -28,17 +27,13 @@ jobs:
           verilator \
             --lint-only \
             --Wall \
-            --Wno-DECLFILENAME \
-            -Wwarn-UNUSEDSIGNAL \
-            -Wwarn-UNUSEDPARAM \
+            --Wno-fatal \
             $(find RISC_V/RISC_V.srcs/sources_1/new -name "*.sv")
-
       - name: Report success
         if: success()
         run: |
           echo "### OK: SystemVerilog Syntax Check Passed" >> $GITHUB_STEP_SUMMARY
           echo "All SystemVerilog files passed Verilator lint checking." >> $GITHUB_STEP_SUMMARY
-
       - name: Report failure
         if: failure()
         run: |

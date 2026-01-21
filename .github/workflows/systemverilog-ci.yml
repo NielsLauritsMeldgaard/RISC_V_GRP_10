@@ -58,12 +58,12 @@ jobs:
       - name: Install Verilator
         run: |
           sudo apt-get update
-          sudo apt-get install -y verilator
+          sudo apt-get install -y verilator cmake make g++
           verilator --version
 
       - name: Run Tests
         run: |
-          cd tests/verilator_simulation
+          cd RISC_V/tests/verilator_simulation
           chmod +x run_test.sh
           TEST=task1/addlarge ./run_test.sh
           TEST=task1/addpos ./run_test.sh

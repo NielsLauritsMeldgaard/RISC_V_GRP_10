@@ -3,9 +3,9 @@
 module system_clock_gen (
     input  logic clk_in,    // 100 MHz Input
     output logic clk_1x,    // 100 MHz Output (CPU)
-    output logic clk_2x,    // 200 MHz Output (Logic/DSP - 0 deg)
-    output logic clk_ram,   // 200 MHz Output (RAM - 180 deg shifted) <--- ADDED PORT
-    output logic locked     // Use this to hold your CPU in reset!
+    output logic clk_2x,    // 200 MHz Output 
+    output logic clk_ram,   // 200 MHz Output ( 180 deg shifted)
+    output logic locked     
 );
 
   logic clk_fb;
@@ -25,13 +25,13 @@ module system_clock_gen (
      
      // CLK 2: 200 MHz (RAM - Shifted)
      .CLKOUT2_DIVIDE(4),      
-     .CLKOUT2_PHASE(180.0)    // <--- CHANGED TO 180.0 
+     .CLKOUT2_PHASE(180.0)    // 
   )
   PLLE2_BASE_inst (
      // Outputs
      .CLKOUT0(clk_2x),    // 200 MHz (0 deg)
      .CLKOUT1(clk_1x),    // 100 MHz (0 deg)
-     .CLKOUT2(clk_ram),   // 200 MHz (180 deg) - Connect to Data Memory
+     .CLKOUT2(clk_ram),   // 200 MHz (180 deg) 
      .CLKOUT3(),
      .CLKOUT4(),
      .CLKOUT5(),

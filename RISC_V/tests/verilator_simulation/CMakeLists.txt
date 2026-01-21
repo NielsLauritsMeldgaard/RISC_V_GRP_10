@@ -11,9 +11,16 @@ if (NOT verilator_FOUND)
 endif()
 
 # Get all SystemVerilog sources
-file(GLOB_RECURSE SV_SOURCES "../../RISC_V/RISC_V.srcs/sources_1/new/*.sv")
+# Use environment variable from run_test.sh script, fallback to relative path
+if(DEFINED ENV{RISC_V_ROOT})
+    set(RISC_V_ROOT $ENV{RISC_V_ROOT})
+else()
+    set(RISC_V_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../RISC_V")
+endif()
+
+file(GLOB_RECURSE SV_SOURCES "${RISC_V_ROOT}/RISC_V.srcs/sources_1/new/*.sv")
 if(NOT SV_SOURCES)
-    message(FATAL_ERROR "No SystemVerilog sources found in RISC_V/RISC_V.srcs/sources_1/new")
+    message(FATAL_ERROR "No SystemVerilog sources found in ${RISC_V_ROOT}/RISC_V.srcs/sources_1/new")
 endif()
 
 message(STATUS "Found SystemVerilog sources: ${SV_SOURCES}")

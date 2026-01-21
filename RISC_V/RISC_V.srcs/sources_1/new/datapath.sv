@@ -1,4 +1,5 @@
 `timescale 1ns / 1ps
+
 module datapath #(
     parameter MEM_WORDS = 1024
 )(
@@ -15,7 +16,7 @@ module datapath #(
     input  logic        uart_rx,
     input  logic        ps2_clk,
     input  logic        ps2_data
-) /* synthesis keep_hierarchy=yes */;
+);
     // --- Global Control Signals ---
     logic stall;
     logic br_dec; 
@@ -62,11 +63,11 @@ module datapath #(
     logic [4:0]  aluOP, rd_id, rd_wb;
     logic [2:0]  funct3_id;
     logic [1:0]  addr_offset_id;
-    logic        mToR, rW, rW_wb, aluSrc_id, branch_id, jump;
+    logic        mToR, rW, rW_wb, aluSrc_id, branch_id;
 
     // --- NEW: JALR Connection Wires ---
-    logic        is_jalr_id, jalr_taken_ex;
-    logic [31:0] jalr_target_ex;
+    logic        is_jal_or_jalr_id, jal_or_jalr_ex;
+    logic [31:0] jal_or_jalr_target_ex;
 
     // --- 1. GLOBAL STALL LOGIC ---
     //assign stall = (iwb_stb && !iwb_ack) || (dwb_stb && !dwb_ack);
@@ -75,11 +76,18 @@ module datapath #(
     assign stall = 0;
     
     // Sync rst signal
-    logic rst_sync, rst_reg, rst_reg_next;
-    assign rst_reg_next = rst;
-    assign rst_sync = rst_reg_next && !rst_reg; 
-    always_ff @(posedge clk)
-        rst_reg <= rst_reg_next;
+    logic rst_meta, rst_sync_internal;
+    logic rst_sync;
+    
+    always_ff @(posedge clk) begin
+            rst_meta <= rst;
+            rst_sync_internal <= rst_meta;
+    end
+    
+    BUFG rst_bufg_inst_r (
+        .I(rst_sync_internal),
+        .O(rst_sync) 
+    );
 
     // --- 2. STAGE 1: INSTRUCTION FETCH (IF) ---
     IF_stage if_stage (
@@ -87,11 +95,9 @@ module datapath #(
         .pc_sel(br_dec), .pc_from_ex(pc_ex), .imm_from_ex(imm_ex),
         .iwb_adr_o(iwb_adr), .iwb_stb_o(iwb_stb),
         .iwb_dat_i(iwb_dat), .iwb_ack_i(iwb_ack),
-        .pc_if_o(pc_w), .instr_if_o(instr_w), .pc_jump_sel(jump), .pc_from_id(pc_id),
-        
-        // --- NEW: JALR Feedback ---
-        .jalr_ex_sel(jalr_taken_ex),
-        .jalr_target_ex(jalr_target_ex)
+        .pc_if_o(pc_w), .instr_if_o(instr_w),                
+        .jal_or_jalr_ex_sel(jal_or_jalr_ex),
+        .jal_or_jalr_target_ex(jal_or_jalr_target_ex)
     );
 
        // --- 3. STAGE 2: INSTRUCTION DECODE (ID) ---
@@ -108,8 +114,7 @@ module datapath #(
         .funct3_id_o(funct3_id), .addr_offset_id_o(addr_offset_id),
         .rs1_id_o(rs1), .rs2_id_o(rs2),
         .aluSrc2_id_o(aluSrc_id), .branch_id_o(branch_id),
-        .is_jump_id_o(jump),   // JAL signal
-        .is_jalr_id_o(is_jalr_id) // --- NEW: Pass JALR flag to EX ---
+        .is_jal_or_jalr_id_o(is_jal_or_jalr_id)   //jal or jalr signal 
     );
     
     // --- 4. STAGE 3: EXECUTE (EX) ---
@@ -122,12 +127,9 @@ module datapath #(
         .aluFwdSrc(aluFwdSrc), .dwb_dat_i(dwb_dat_i), 
         .res_ex_o(ex_res), .rd_addr_ex_o(rd_wb), .regWrite_ex_o(rW_wb),
         .pc_ex_o(pc_ex), .imm_ex_o(imm_ex), .br_dec_ex_o(br_dec),
-        .jump(jump),  // Pass JAL signal
-        
-        // --- NEW: JALR Processing ---
-        .is_jalr_ex_i(is_jalr_id),      // From ID
-        .jalr_target_ex_o(jalr_target_ex), // To IF
-        .jalr_taken_ex_o(jalr_taken_ex)    // To IF
+        .is_jal_or_jalr_ex_i(is_jal_or_jalr_id),      // // Pass jump signals, From ID
+        .jal_or_jalr_target_ex_o(jal_or_jalr_target_ex), // To IF
+        .jal_or_jalr_ex_o(jal_or_jalr_ex)    // To IF
     );
     // --- 5. BUS INTERCONNECT ---
     iwb_interconnect iwb_bus_matrix (

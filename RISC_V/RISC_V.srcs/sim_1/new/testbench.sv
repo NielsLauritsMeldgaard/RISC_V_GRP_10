@@ -11,7 +11,7 @@
      end
 
      // DUT
-     datapath #(.MEM_WORDS(128)) dut (
+     datapath #(.MEM_WORDS(16384)) dut (
          .clk(clk),
          .rst(rst)
      );
@@ -20,8 +20,8 @@
      // XSim runs from RISC_V/RISC_V.sim/sim_1/behav/xsim
      // So we need to go up 4 levels to reach RISC_V/, then into tests/
      string test_root = "../../../../tests/";       // default root (relative to sim run dir)
-     string test = "task2/branchmany";                // test name like "task1/addpos"
-     int cycles = 10000000;                         // default max cycles per test
+     string test = "task3/loop";                // test name like "task1/addpos"
+     int cycles = 10000;                         // default max cycles per test
      int passed, failed;
      
      // Allow +arg to overwrite
@@ -48,7 +48,7 @@
          
          $display("[TB] Loading expected results from %s", resfile);
          
-         // Read 32 registers × 4 bytes each (little-endian)
+         // Read 32 registers x 4 bytes each (little-endian)
          for (int i = 0; i < 32; i++) begin
              bytes_read = $fread(buffer, fd);
              if (bytes_read == 4) begin

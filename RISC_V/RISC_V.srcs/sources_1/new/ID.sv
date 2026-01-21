@@ -1,5 +1,4 @@
 `timescale 1ns / 1ps
-(* keep_hierarchy = "yes" *)
 
 module ID(
     // --- Global Control Signals ---
@@ -45,8 +44,7 @@ module ID(
     output logic [4:0]  rd_addr_id_o,
     output logic [2:0]  funct3_id_o,
     output logic [1:0]  addr_offset_id_o,
-    output logic        is_jump_id_o,
-    output logic        is_jalr_id_o  // --- NEW: Flag for EX to handle JALR ---
+    output logic        is_jal_or_jalr_id_o
     );
 
     // --- Internal Typedefs and Logic ---
@@ -54,7 +52,7 @@ module ID(
 
     logic [6:0]  opcode;
     logic [4:0]  rs1, rs2, rd;
-    logic aluSrc1, aluSrc2, memToReg, regWrite, memWrite, branch, is_jal, is_jalr;
+    logic aluSrc1, aluSrc2, memToReg, regWrite, memWrite, branch, is_jal_or_jalr;
     logic [4:0] aluCtrl;
     logic [2:0] imm_sel;
     logic [31:0] rs2_data, rs1_data;
@@ -88,7 +86,7 @@ module ID(
     // --- Main Decoder and Data Logic ---
     always_comb begin
         // 1. Flush logic
-        IR_next = (branch_taken || is_jal) ? 32'h00000013 : instr_id_i;
+        IR_next = (branch_taken) ? 32'h00000013 : instr_id_i;
 
         // 2. Partition IR
         rs1    = IR[19:15];
@@ -101,7 +99,7 @@ module ID(
 
         // 3. Defaults
         aluSrc1 = 0; aluSrc2 = 0; memToReg = 0; regWrite = 0;
-        memWrite = 0; branch = 0; is_jal = 0; is_jalr = 0;
+        memWrite = 0; branch = 0; is_jal_or_jalr = 0;
         aluCtrl = 5'b0; imm_sel = IMM_I;
 
         // 4. Instruction decoding
@@ -114,8 +112,8 @@ module ID(
             7'b1100011: begin branch = 1; aluCtrl = {1'b1,IR[14:12],1'b0}; imm_sel=IMM_B; end
             7'b0110111: begin regWrite=1; aluSrc2=1; imm_sel=IMM_U; aluCtrl=5'b11111; end
             7'b0010111: begin regWrite=1; aluSrc2=1; imm_sel=IMM_U; aluCtrl=5'b00000; aluSrc1=1; end
-            7'b1101111: begin regWrite=1; imm_sel=IMM_J; is_jal=1; aluCtrl = 5'b00000; aluSrc1 = 1; end
-            7'b1100111: begin regWrite=1; imm_sel=IMM_I; is_jalr=1; aluCtrl = 5'b00000; end  
+            7'b1101111: begin regWrite=1; imm_sel=IMM_J; is_jal_or_jalr=1; aluCtrl = 5'b00000; aluSrc1 = 1; aluSrc2 = 1; end
+            7'b1100111: begin regWrite=1; imm_sel=IMM_I; is_jal_or_jalr=1; aluCtrl = 5'b00000; aluSrc2 = 1; end  
             default: ;
         endcase
 
@@ -131,12 +129,14 @@ module ID(
 
         // --- JAL / JALR target calculation ---
         dwb_adr_o = rs1_data + imm_id_o;                // reused adder for Load/Store address
-        jal_target_id   = pc_id + imm_id_o;             // PC-relative for JAL
+        
+        //jal_target_id   = pc_id + imm_id_o;             // PC-relative for JAL
         
         // --- MODIFIED: Target Selection ---
         // If JAL, we redirect immediately in ID.
         // If JALR, we DO NOT redirect in ID (regs not ready). We wait for EX.
-        pc_id_o = is_jal ? jal_target_id : pc_id;
+        
+        pc_id_o = pc_id;
 
         // 7. Output signals
         aluCtrl_id_o    = aluCtrl;
@@ -145,14 +145,13 @@ module ID(
         rd_addr_id_o    = rd;
         funct3_id_o     = IR[14:12];
         addr_offset_id_o= dwb_adr_o[1:0];
-        rs2_immData     = (is_jal)? 4: aluSrc2 ? imm_id_o : rs2_data;
+        rs2_immData     = aluSrc2 ? imm_id_o : rs2_data;
         rs1_data_o      = aluSrc1 ? pc_id : rs1_data;
         aluSrc2_id_o    = aluSrc2;
         branch_id_o     = branch;
         
         // --- MODIFIED: Jump Flags ---
-        is_jump_id_o    = is_jal;   // Only JAL flushes ID
-        is_jalr_id_o    = is_jalr;  // Pass JALR decision to EX
+        is_jal_or_jalr_id_o    = is_jal_or_jalr;  // Pass JALR decision to EX
           
        
         // --- Wishbone store data

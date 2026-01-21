@@ -1,4 +1,5 @@
 `timescale 1ns / 1ps
+
 module IF_stage(
     input  logic        clk,
     input  logic        rst,
@@ -12,8 +13,8 @@ module IF_stage(
     input  logic        pc_jump_sel,   // JAL taken from ID
     
     // --- NEW: JALR Logic (Feedback from EX) ---
-    input  logic        jalr_ex_sel,    // NEW: High if JALR is processed in EX
-    input  logic [31:0] jalr_target_ex, // NEW: Calculated Target (rs1 + imm) from EX
+    input  logic        jal_or_jalr_ex_sel,    // NEW: High if JALR is processed in EX
+    input  logic [31:0] jal_or_jalr_target_ex, // NEW: Calculated Target (rs1 + imm) from EX
     
     
     // --- Instruction Wishbone Master --- Harvard style with seperate instructions and data BUS 
@@ -34,17 +35,16 @@ module IF_stage(
     // Calculates either PC+4 (Normal) or Branch-Target (pc_ex + imm_ex)
        always_comb begin
             // 1. Select Base Address (Operand A)
-            adder_op_a = jalr_ex_sel ? jalr_target_ex : // Highest Priority: JALR from EX (Absolute)
-                         pc_sel      ? pc_from_ex     : // Branch from EX (Base for offset)
-                         pc_jump_sel ? pc_from_id     : // JAL from ID (Absolute pre-calc)
-                                       pc_curr;         // Default: Current PC
+            adder_op_a = jal_or_jalr_ex_sel ? jal_or_jalr_target_ex : // Highest Priority: JALR from EX (Absolute)
+                         pc_sel             ? pc_from_ex     : // Branch from EX (Base for offset)                        
+                                              pc_curr;         // Default: Current PC
     
             // 2. Select Offset (Operand B)
             // If JALR or JAL, we add 0 because the target is already calculated.
             // If Branch, we add the Immediate. Otherwise, we add 4.
-            adder_op_b = (jalr_ex_sel | pc_jump_sel) ? 32'd0 :
-                         pc_sel                      ? imm_from_ex : 
-                                                       32'd4;
+            adder_op_b = (jal_or_jalr_ex_sel) ? 32'd0 :
+                         pc_sel               ? imm_from_ex : 
+                                                32'd4;
     
             // 3. The Single Adder
             adder_out = adder_op_a + adder_op_b;

@@ -1,3 +1,6 @@
+`timescale 1ns / 1ps
+
+
 module ps2_controller (
     input  logic        clk, rst,
     input  logic        ps2_clk,     // Physical Clock pin

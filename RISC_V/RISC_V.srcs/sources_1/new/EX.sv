@@ -20,8 +20,7 @@ module EX (
     input  logic [1:0]  aluFwdSrc,         // Forwarding mux selector
     input  logic [1:0]  addr_offset_ex_i, // From ID: addr[1:0] for Load slicing
     input  logic [2:0]  funct3_ex_i,      // From ID: funct3 for Load slicing
-    input  logic        jump,             // JAL signal from ID (Just for branch calc feedback)
-    input  logic        is_jalr_ex_i,     // --- NEW: JALR signal from ID ---
+    input  logic        is_jal_or_jalr_ex_i,     // Jal or Jalr signal from ID
 
     // --- Data Bus Input ---
     input  logic [31:0] dwb_dat_i,         // 32-bit word arriving from Data Memory/Bus
@@ -35,8 +34,8 @@ module EX (
     output logic        br_dec_ex_o,         // Result of (branch_signal & alu_comparison) OR JAL
     
     // --- NEW: JALR Outputs ---
-    output logic [31:0] jalr_target_ex_o,   // Calculated Target for IF
-    output logic        jalr_taken_ex_o     // Signal to take the jump
+    output logic [31:0] jal_or_jalr_target_ex_o,   // Calculated Target for IF
+    output logic        jal_or_jalr_ex_o    // Signal to take the jump
 );
 
     // --- Internal Pipeline Registers (ID/EX) ---
@@ -46,7 +45,7 @@ module EX (
     logic [1:0]  addr_offset_reg;
     logic        mToReg_reg, rWrite_reg, br_dec_ex;
     logic [1:0]  aluFwdSrc_reg; 
-    logic        is_jalr_reg; // --- NEW: Register for JALR flag ---
+    logic        is_jal_or_jalr_reg; // --- NEW: Register for JALR flag ---
 
     // --- Internal Wires ---
     logic [31:0] op1, op2, aluRes, load_data;
@@ -101,7 +100,7 @@ module EX (
         endcase
 
         // C. Final Output Mux (ALU or Memory)
-        res_ex_o = mToReg_reg ? load_data : aluRes;
+        res_ex_o = is_jal_or_jalr_reg ? pc_reg + 4 : mToReg_reg ? load_data : aluRes;
 
         // D. Branch and Pass-through Assignments
         rd_addr_ex_o     = rd_reg; 
@@ -111,13 +110,13 @@ module EX (
         // --- MODIFIED: JALR Calculation ---
         // For JALR, target = (rs1 + imm) & ~1. 
         // ALUOp was set to ADD, so aluRes contains (rs1 + imm).
-        jalr_target_ex_o = aluRes & 32'hFFFFFFFE; 
-        jalr_taken_ex_o  = is_jalr_reg;
+        jal_or_jalr_target_ex_o = aluRes & 32'hFFFFFFFE; 
+        jal_or_jalr_ex_o  = is_jal_or_jalr_reg;
         
         // --- MODIFIED: Branch Decision ---
         // Includes Conditional Branch (br_dec_ex), JAL (jump from ID), or JALR (jump from EX)
         // This triggers the flush of previous stages.
-        br_dec_ex_o      = (br_dec_ex || jalr_taken_ex_o);
+        br_dec_ex_o      = (br_dec_ex || jal_or_jalr_ex_o);
         
         pc_ex_o          = pc_reg; 
         imm_ex_o         = imm_reg;
@@ -132,7 +131,7 @@ module EX (
             {mToReg_reg, rWrite_reg} <= '0;
             ex_res_reg <= '0;
             aluFwdSrc_reg <= 2'b00;
-            is_jalr_reg   <= 1'b0; // Reset JALR flag
+            is_jal_or_jalr_reg   <= 1'b0; // Reset JALR flag
         end else if (!stall) begin
             // Capture new values from ID stage ONLY if not stalling
             rs1_reg         <= rs1_val_reg_next;
@@ -147,7 +146,7 @@ module EX (
             rWrite_reg      <= regWrite_ex_i;
             ex_res_reg      <= res_ex_o;
             aluFwdSrc_reg   <= aluFwdSrc;
-            is_jalr_reg     <= is_jalr_ex_i; // Capture JALR flag
+            is_jal_or_jalr_reg     <= is_jal_or_jalr_ex_i; // Capture JALR flag
         end
     end
 

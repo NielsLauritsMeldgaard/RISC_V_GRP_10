@@ -1,7 +1,9 @@
 `timescale 1ns / 1ps
 
 module datapath #(
-    parameter MEM_WORDS = 1024
+    parameter INSTRUCTION_MEM_WORDS = 32768, //128KB  
+    parameter DATA_MEM_WORDS = 16384, //64 KB
+    parameter BOOTLOADER_MEM_WORDS = 32 // 128 Bytes
 )(
     input logic clk, 
     input logic rst,
@@ -182,7 +184,7 @@ module datapath #(
     );
 
     // --- 7. SLAVE 0: DATA RAM ---
-    data_memory #(.MEM_WORDS(MEM_WORDS)) data_mem (
+    data_memory #(.MEM_WORDS(DATA_MEM_WORDS)) data_mem (
         .clk(clk), .rst(rst_sync),
         .addr(s0_adr), .Wdata(s0_dat_w), .sel(s0_sel),
         .En(s0_stb && !s0_we), .We(s0_stb && s0_we),
@@ -190,7 +192,7 @@ module datapath #(
     );
 
     // --- 8. INSTRUCTION MEMORY (Dual-Port) ---
-    instruction_memory #(.MEM_WORDS(MEM_WORDS)) instr_mem (
+    instruction_memory #(.MEM_WORDS(INSTRUCTION_MEM_WORDS)) instr_mem (
         .clk(clk), .rst(rst_sync),
         // PORT A: Write from Data WB (Bootloader writes via slave 2)
         .a_dwb_adr_i(s2_adr), .a_dwb_dat_i(s2_dat_w), .a_dwb_sel_i(s2_sel),
@@ -202,7 +204,7 @@ module datapath #(
     );
     
     // --- 9. I-WB SLAVE 0: BOOTLOADER ROM ---
-    brom bootloader (
+    brom #(.MEM_WORDS(BOOTLOADER_MEM_WORDS))bootloader (
         .clk(clk), .rst(rst_sync),
         .wb_adr_i(s0bb_adr), .wb_stb_i(s0bb_stb),
         .wb_dat_o(s0bb_dat), .wb_ack_o(s0bb_ack)

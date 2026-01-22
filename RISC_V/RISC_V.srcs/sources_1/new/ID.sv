@@ -76,7 +76,8 @@ module ID(
 
     // --- Register File ---
     regFile regFile (
-     .clk(clk), .rst(rst),
+     .rst(rst),
+     .clk(clk),
      .we(regWrite_wb),
      .rs1_addr(IR[19:15]), .rs2_addr(IR[24:20]),
      .rd_addr(rd_addr_wb), .rd_data(rd_data_wb),

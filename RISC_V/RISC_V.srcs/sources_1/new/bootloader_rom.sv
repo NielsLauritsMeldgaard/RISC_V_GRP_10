@@ -1,8 +1,7 @@
 `timescale 1ns / 1ps
 
-module brom #(
-    //@TODO: Write bootloader program and find correct program size
-    parameter MEM_WORDS = 128, // 128 instructions
+module brom #(    
+    parameter MEM_WORDS = 32, // 128 instructions
     //parameter BOOTROM_FILE = "../../../../tests/task1/addpos.mem"
     //parameter BOOTROM_FILE = "../../../../bootloader/bootloader.mem"
     parameter BOOTROM_FILE = "program.mem"

@@ -124,7 +124,7 @@ module EX (
     
     // --- 3. SEQUENTIAL LOGIC (Pipeline Registers) ---
     always_ff @(posedge clk) begin
-        if (rst || br_dec_ex) begin
+        if (rst || br_dec_ex_o) begin
             // Reset all pipeline registers to zero
             {rs1_reg, rs2_reg, pc_reg, imm_reg} <= '0;
             {aluOP_reg, rd_reg, funct3_reg, addr_offset_reg} <= '0;

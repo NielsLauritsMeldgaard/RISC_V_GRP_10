@@ -10,6 +10,7 @@ module system_clock_gen (
 
   logic clk_fb;
 
+  `ifdef SYNTHESIS
   // PLLE2_BASE: Base Phase Locked Loop (PLL)
   PLLE2_BASE #(
      .CLKFBOUT_MULT(8),       // VCO = 800 MHz (100 * 8)
@@ -46,5 +47,12 @@ module system_clock_gen (
      .PWRDWN(1'b0),
      .RST(1'b0)
   );
+  `else
+  // For simulation, bypass PLL - just pass through input clock
+  assign clk_1x = clk_in;
+  assign clk_2x = clk_in;  // In sim, use same clock
+  assign clk_ram = clk_in;
+  assign locked = 1'b1;    // Always locked in simulation
+  `endif
 
 endmodule

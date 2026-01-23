@@ -86,10 +86,15 @@ module datapath #(
             rst_sync_internal <= rst_meta;
     end
     
+    `ifdef SYNTHESIS
     BUFG rst_bufg_inst_r (
         .I(rst_sync_internal),
         .O(rst_sync) 
     );
+    `else
+    // For simulation, just wire through without BUFG
+    assign rst_sync = rst_sync_internal;
+    `endif
 
     // --- 2. STAGE 1: INSTRUCTION FETCH (IF) ---
     IF_stage if_stage (

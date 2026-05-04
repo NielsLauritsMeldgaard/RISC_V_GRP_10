@@ -14,34 +14,28 @@ module forwarding_unit (
     output logic [1:0]  aluFwdSrc,     // [1]=rs1 forward, [0]=rs2 forward
     output logic        fwd_mem_data   // forward data to memory store
 );
-
+    logic wb_active;
     always_comb begin
         // defaults
         aluFwdSrc    = 2'b00;
         fwd_mem_data = 1'b0;
+        
+        wb_active = rW_wb && (rd_wb != 5'd0);
+
 
         ////// EXECUTE STAGE HAZARDS //////
 
         // Forward to ALU operand A (rs1)
-        if (rW_wb && (rd_wb != 5'd0) && (rd_wb == rs1)) begin
-            aluFwdSrc[1] = 1'b1;
-        end
+        aluFwdSrc[1] = wb_active && (rd_wb == rs1);
 
         // Forward to ALU operand B (rs2)
         // CRITICAL FIX: Only forward to Op2 if the instruction 
         // is NOT using an immediate (aluSrc is 0) OR if it is a Branch.
-        if (rW_wb && (rd_wb != 5'd0) && (rd_wb == rs2)) begin
-            if (!aluSrc_id || branch_id) begin
-                aluFwdSrc[0] = 1'b1;
-            end
-        end
-
+        aluFwdSrc[0] = wb_active && (rd_wb == rs2) && (!aluSrc_id || branch_id);
         ////// MEMORY STORE HAZARD //////
 
         // Forward store data from WB stage
-        if (rW_wb && dwb_we && (rd_wb != 5'd0) && (rd_wb == rs2)) begin
-            fwd_mem_data = 1'b1;
-        end
+        fwd_mem_data = wb_active && dwb_we && (rd_wb == rs2);
     end
 
 endmodule

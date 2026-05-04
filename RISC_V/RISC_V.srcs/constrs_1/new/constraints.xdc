@@ -77,6 +77,17 @@ set_property -dict { PACKAGE_PIN A18   IOSTANDARD LVCMOS33 } [get_ports uart_tx]
 set_property -dict { PACKAGE_PIN C17   IOSTANDARD LVCMOS33   PULLUP true } [get_ports ps2_clk]
 set_property -dict { PACKAGE_PIN B17   IOSTANDARD LVCMOS33   PULLUP true } [get_ports ps2_data]
 
+## SPI via Pmod Header JB
+set_property -dict { PACKAGE_PIN A14 IOSTANDARD LVCMOS33 } [get_ports {SCLK}]
+set_property -dict { PACKAGE_PIN A16 IOSTANDARD LVCMOS33 } [get_ports {MOSI}]
+set_property -dict { PACKAGE_PIN B15 IOSTANDARD LVCMOS33 } [get_ports {MISO}]
+#set_property PACKAGE_PIN B16 [get_ports {audio_out[3]}]
+set_property -dict { PACKAGE_PIN A15 IOSTANDARD LVCMOS33 } [get_ports {SPI_SS[0]}]
+set_property -dict { PACKAGE_PIN A17 IOSTANDARD LVCMOS33 } [get_ports {SPI_SS[1]}]
+set_property -dict { PACKAGE_PIN C15 IOSTANDARD LVCMOS33 } [get_ports {SPI_SS[2]}]
+#set_property PACKAGE_PIN C16 [get_ports {audio_out[7]}]
+
+
 ## Configuration options
 set_property CONFIG_VOLTAGE 3.3 [current_design]
 set_property CFGBVS VCCO [current_design]

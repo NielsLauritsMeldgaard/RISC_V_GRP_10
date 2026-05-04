@@ -36,8 +36,8 @@ The bootloader loads RISC-V programs into instruction memory over UART at startu
 ### 1. Compile Your Program
 
 ```bash
-riscv64-unknown-elf-as program.s -o program.o
-riscv64-unknown-elf-objcopy -O binary program.o program.bin
+riscv64-unknown-elf-gcc -march=rv32i -mabi=ilp32 -ffreestanding -nostdlib -nostartfiles -static -O0 -g -msmall-data-limit=0 -Wl,-e,_start -Wl,-Map=main.map  -T linker.ld crt0.s main.c -o main.elf
+ riscv64-unknown-elf-objcopy -O binary main.elf main.bin
 ```
 
 ### 2. Upload via UART

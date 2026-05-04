@@ -1,9 +1,13 @@
 `timescale 1ns / 1ps
 
 module datapath #(
-    parameter INSTRUCTION_MEM_WORDS = 32768, //128KB  
-    parameter DATA_MEM_WORDS = 16384, //64 KB
-    parameter BOOTLOADER_MEM_WORDS = 32 // 128 Bytes
+    // Memory Sizes (in 32-bit words)
+    // Total size: 1800 Kbits = 1800 * 1024 bits = 1800 * 1024 / 32 words = 57600 words or 230.4 kB = 225 KB
+    // Weight: 70% / 30% split between instruction and data memory
+    // Leave some extra headroom 
+    parameter INSTRUCTION_MEM_WORDS = 32768, // 131072 bytes or 128 KB  
+    parameter DATA_MEM_WORDS = 16384, // 65536 bytes or 64 KB
+    parameter BOOTLOADER_MEM_WORDS = 84
 )(
     input logic clk, 
     input logic rst,
@@ -17,7 +21,11 @@ module datapath #(
     output logic        uart_tx,
     input  logic        uart_rx,
     input  logic        ps2_clk,
-    input  logic        ps2_data
+    input  logic        ps2_data,
+    input  logic        MISO,
+    output logic        MOSI,
+    output logic        SCLK,
+    output logic [2:0]  SPI_SS
 );
     // --- Global Control Signals ---
     logic stall;
@@ -185,7 +193,8 @@ module datapath #(
         .leds(leds), .switches(switches), .buttons(buttons),
         .segments(seven_seg_bits), .anodes(seven_seg_anodes),
         .uart_tx(uart_tx), .uart_rx(uart_rx),
-        .ps2_clk(ps2_clk), .ps2_data(ps2_data)
+        .ps2_clk(ps2_clk), .ps2_data(ps2_data),
+        .MISO(MISO), .MOSI(MOSI), .SCLK(SCLK), .SPI_SS(SPI_SS)
     );
 
     // --- 7. SLAVE 0: DATA RAM ---

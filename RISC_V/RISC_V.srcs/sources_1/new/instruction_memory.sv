@@ -45,16 +45,20 @@ module instruction_memory #(
         for (int i = 0; i < MEM_WORDS; i++) mem[i] = 32'h0;
     end
 
+    logic We_dwb, En_iw;
+    assign We_dwb = a_dwb_stb_i && a_dwb_we_i;
+    assign En_iwb = b_iwb_stb_i;
+
     // Port A:
     always_ff @(posedge clk) begin
         if (rst) begin
             a_dwb_ack_o <= 1'b0;
         end else begin
             // Wishbone Handshake
-            a_dwb_ack_o <= (a_dwb_stb_i & a_dwb_we_i); // multi-cycle write ack
+            a_dwb_ack_o <= We_dwb; // multi-cycle write ack
 
             // Write Logic (Byte-Selective)
-            if (a_dwb_we_i) begin
+            if (We_dwb) begin
                 if (a_dwb_sel_i[0]) mem[a_dwb_adr_i[ADDR_BITS+1 : 2]][7:0]   <= a_dwb_dat_i[7:0];
                 if (a_dwb_sel_i[1]) mem[a_dwb_adr_i[ADDR_BITS+1 : 2]][15:8]  <= a_dwb_dat_i[15:8];
                 if (a_dwb_sel_i[2]) mem[a_dwb_adr_i[ADDR_BITS+1 : 2]][23:16] <= a_dwb_dat_i[23:16];
@@ -70,10 +74,10 @@ module instruction_memory #(
             b_iwb_dat_o <= 32'h00000013; 
         end else begin
             // Wishbone Handshake
-            b_iwb_ack_o <= b_iwb_stb_i;
+            b_iwb_ack_o <= En_iwb;
 
             // Read Logic
-            if (b_iwb_stb_i) begin               
+            if (En_iwb) begin               
                 b_iwb_dat_o <= mem[b_iwb_adr_i[ADDR_BITS+1 : 2]];
             end
         end
